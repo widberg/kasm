@@ -1,0 +1,15 @@
+#	instructions
+	li v0 0   # systemCallType = EXIT
+	jal func  # func()
+	lw a0 ret # exitCode = *ret
+	li t0 1
+	add a0 a0 t0
+	sys       # systemCall(systemCallType, exitCode)
+func:
+	li t0 2   # tmp = 2
+	sw ret t0 # *ret = tmp
+	jr ra     # return
+
+#	data
+ret:
+	space 4   # reserve 1 word of space in memory
