@@ -7,7 +7,7 @@
 	sys       # systemCall(systemCallType, exitCode)
 func:
 	li t0 2   # tmp = 2
-	sw ret t0 # *ret = tmp
+	sw t0 ret # *ret = tmp
 	jr ra     # return
 
 #	data

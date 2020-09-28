@@ -5,7 +5,7 @@
 
 const int INSTRUCTION_SIZE = sizeof(std::uint32_t);
 const int INSTRUCTION_BIT = CHAR_BIT * INSTRUCTION_SIZE;
-const int OPCODE_BIT = 5;
+const int OPCODE_BIT = 6;
 const int REGISTER_BIT = 5;
 const int ADDRESS_BIT = 16;
 const int IMMEDIATE_BIT = 16;
@@ -17,10 +17,11 @@ const std::uint32_t REGISTER_2_OFFSET = REGISTER_1_OFFSET - REGISTER_BIT;
 const std::uint32_t ADDRESS_OFFSET = 0;
 const std::uint32_t IMMEDIATE_OFFSET = 0;
 
-const std::uint32_t OPCODE_MASK = 0b11111;
+const std::uint32_t OPCODE_MASK = 0b111111;
 const std::uint32_t REGISTER_MASK = 0b11111;
 const std::uint32_t IMMEDIATE_MASK = 0xFFFF;
-const std::uint32_t LONG_ADDRESS_MASK = 0xFFFF;
+const std::uint32_t RELATIVE_ADDRESS_MASK = 0xFFFF;
+const std::uint32_t ABSOLUTE_ADDRESS_MASK = 0x03FFFFFF;
 
 enum Opcode : std::uint32_t
 {
@@ -38,7 +39,11 @@ enum Opcode : std::uint32_t
     SAVE_WORD,
     LOAD_BYTE,
     SAVE_BYTE,
-    ADD
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    MOD,
 };
 
 enum Register

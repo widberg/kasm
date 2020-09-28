@@ -19,4 +19,16 @@ private:
 
 	std::unordered_map<std::string, std::uint16_t> labelLocations;
 	std::set<std::pair<std::uint32_t, std::string>> unresolvedLabelLocations;
+
+	enum Token
+	{
+		None,
+		Register0 = 1 << 1,
+		Register1 = 1 << 2,
+		Register2 = 1 << 3,
+		DirectAddressAbsolute = 1 << 4,
+		DirectAddressOffset = 1 << 5,
+		IndirectAddressOffset = 1 << 6,
+		Immediate = 1 << 7
+	};
 };

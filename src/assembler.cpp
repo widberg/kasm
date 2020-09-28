@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <fstream>
+#include <utility>
 
 #include "common.hpp"
 
@@ -15,6 +16,27 @@ Assembler::~Assembler()
 
 void Assembler::assemble(const std::string& sourcePath, const std::string& programPath)
 {
+    const static std::unordered_map<std::string, std::pair<std::uint32_t, std::uint32_t>> INSTRUCTION_FORMATS = {
+        { "nop", { NOP, None } },
+        { "j", { JUMP, DirectAddressAbsolute } },
+        { "jr", { JUMP_REGISTER, Register0 } },
+        { "jal", { JUMP_AND_LINK, DirectAddressAbsolute } },
+        { "jalr", { JUMP_AND_LINK_REGISTER, Register0 } },
+        { "b", { BRANCH_UNCONDITIONAL, DirectAddressOffset } },
+        { "beq", { BRANCH_EQUALS, Register0 | Register1 | DirectAddressOffset } },
+        { "li", { LOAD_IMMEDIATE, Register0 | Immediate } },
+        { "lw", { LOAD_WORD, Register0 | IndirectAddressOffset } },
+        { "sw", { SAVE_WORD, Register0 | IndirectAddressOffset } },
+        { "lb", { LOAD_BYTE, Register0 | IndirectAddressOffset } },
+        { "sb", { SAVE_BYTE, Register0 | IndirectAddressOffset } },
+        { "sys", { SYSTEM_CALL, None} },
+        { "add", { ADD, Register0 | Register1 | Register2 } },
+        { "sub", { SUB, Register0 | Register1 | Register2 } },
+        { "mul", { MUL, Register0 | Register1 | Register2 } },
+        { "div", { DIV, Register0 | Register1 | Register2 } },
+        { "mod", { MOD, Register0 | Register1 | Register2 } },
+    };
+
     labelLocations.clear();
     unresolvedLabelLocations.clear();
 
@@ -24,71 +46,49 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
     std::string current;
     while (sourceFile >> current)
     {
-        if (current == "nop")
+        if (INSTRUCTION_FORMATS.count(current))
         {
-            std::uint32_t instruction = NOP << OPCODE_OFFSET;
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
-        }
-        else if (current == "jr")
-        {
-            std::string reg;
-            sourceFile >> reg;
-            std::uint32_t instruction = (JUMP_REGISTER << OPCODE_OFFSET) | resolveRegisterName(reg, 0);
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
-        }
-        else if (current == "jal")
-        {
-            std::string address;
-            sourceFile >> address;
-            std::uint32_t instruction = (JUMP_AND_LINK << OPCODE_OFFSET) | getLabelLocation(programFile.tellp(), address);
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
-        }
-        else if (current == "jalr")
-        {
-            std::string reg;
-            sourceFile >> reg;
-            std::uint32_t instruction = (JUMP_AND_LINK_REGISTER << OPCODE_OFFSET) | resolveRegisterName(reg, 0);
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
-        }
-        else if (current == "beq")
-        {
-            std::string sReg, tReg, address;
-            sourceFile >> sReg >> tReg >> address;
-            std::uint32_t instruction = (ADD << OPCODE_OFFSET) | resolveRegisterName(sReg, 0) | resolveRegisterName(tReg, 1) | getLabelLocation(programFile.tellp(), address);
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
-        }
-        else if (current == "li")
-        {
-            std::string reg;
-            std::uint32_t immediate;
-            sourceFile >> reg >> immediate;
-            std::uint32_t instruction = (LOAD_IMMEDIATE << OPCODE_OFFSET) | resolveRegisterName(reg, 0) | (immediate << IMMEDIATE_OFFSET);
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
-        }
-        else if (current == "lw")
-        {
-            std::string reg, address;
-            sourceFile >> reg >> address;
-            std::uint32_t instruction = (LOAD_WORD << OPCODE_OFFSET) | resolveRegisterName(reg, 0) | getLabelLocation(programFile.tellp(), address);
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
-        }
-        else if (current == "sw")
-        {
-            std::string address, reg;
-            sourceFile >> address >> reg;
-            std::uint32_t instruction = (SAVE_WORD << OPCODE_OFFSET) | getLabelLocation(programFile.tellp(), address) | resolveRegisterName(reg, 0);
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
-        }
-        else if (current == "sys")
-        {
-            std::uint32_t instruction = SYSTEM_CALL << OPCODE_OFFSET;
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
-        }
-        else if (current == "add")
-        {
-            std::string dReg, sReg, tReg;
-            sourceFile >> dReg >> sReg >> tReg;
-            std::uint32_t instruction = (ADD << OPCODE_OFFSET) | resolveRegisterName(dReg, 0) | resolveRegisterName(sReg, 1) | resolveRegisterName(tReg, 2);
+            std::pair<std::uint32_t, std::uint32_t> instructionData = INSTRUCTION_FORMATS.at(current);
+            std::uint32_t instruction = instructionData.first << OPCODE_OFFSET;
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (instructionData.second & (Register0 << i))
+                {
+                    std::string reg;
+                    sourceFile >> reg;
+                    instruction |= resolveRegisterName(reg, i);
+                }
+            }
+
+            if (instructionData.second & DirectAddressAbsolute)
+            {
+                std::string label;
+                sourceFile >> label;
+                instruction |= getLabelLocation(programFile.tellp(), label);
+            }
+
+            if (instructionData.second & DirectAddressOffset)
+            {
+                std::string label;
+                sourceFile >> label;
+                instruction |= getLabelLocation(programFile.tellp(), label);
+            }
+
+            if (instructionData.second & IndirectAddressOffset)
+            {
+                std::string label;
+                sourceFile >> label;
+                instruction |= getLabelLocation(programFile.tellp(), label);
+            }
+
+            if (instructionData.second & Immediate)
+            {
+                std::uint32_t immediate;
+                sourceFile >> immediate;
+                instruction |= immediate;
+            }
+
             programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
         }
         else if (current == "word")

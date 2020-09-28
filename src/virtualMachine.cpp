@@ -126,7 +126,7 @@ std::uint32_t VirtualMachine::extractRegister(std::uint32_t instruction, int reg
 
 std::uint32_t VirtualMachine::extractAddress(std::uint32_t instruction)
 {
-    return (instruction >> ADDRESS_OFFSET) & LONG_ADDRESS_MASK;
+    return (instruction >> ADDRESS_OFFSET) & RELATIVE_ADDRESS_MASK;
 }
 
 std::uint32_t VirtualMachine::extractImmediate(std::uint32_t instruction)
