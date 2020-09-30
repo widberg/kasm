@@ -2,7 +2,6 @@
 
 #include <exception>
 #include <fstream>
-#include <utility>
 
 #include "common.hpp"
 
@@ -16,29 +15,35 @@ Assembler::~Assembler()
 
 void Assembler::assemble(const std::string& sourcePath, const std::string& programPath)
 {
-    const static std::unordered_map<std::string, std::pair<std::uint32_t, std::uint32_t>> INSTRUCTION_FORMATS = {
-        { "nop", { NOP, None } },
-        { "j", { JUMP, DirectAddressAbsolute } },
-        { "jr", { JUMP_REGISTER, Register0 } },
-        { "jal", { JUMP_AND_LINK, DirectAddressAbsolute } },
-        { "jalr", { JUMP_AND_LINK_REGISTER, Register0 } },
-        { "b", { BRANCH_UNCONDITIONAL, DirectAddressOffset } },
-        { "beq", { BRANCH_EQUALS, Register0 | Register1 | DirectAddressOffset } },
-        { "li", { LOAD_IMMEDIATE, Register0 | Immediate } },
-        { "lw", { LOAD_WORD, Register0 | IndirectAddressOffset } },
-        { "sw", { SAVE_WORD, Register0 | IndirectAddressOffset } },
-        { "lb", { LOAD_BYTE, Register0 | IndirectAddressOffset } },
-        { "sb", { SAVE_BYTE, Register0 | IndirectAddressOffset } },
-        { "sys", { SYSTEM_CALL, None} },
-        { "add", { ADD, Register0 | Register1 | Register2 } },
-        { "sub", { SUB, Register0 | Register1 | Register2 } },
-        { "mul", { MUL, Register0 | Register1 | Register2 } },
-        { "div", { DIV, Register0 | Register1 | Register2 } },
-        { "mod", { MOD, Register0 | Register1 | Register2 } },
+    const static std::unordered_map<std::string, std::uint32_t> INSTRUCTION_NAMES = {
+        { "nop", NOP },
+        { "j", JUMP },
+        { "jr", JUMP_REGISTER },
+        { "jal", JUMP_AND_LINK },
+        { "jalr", JUMP_AND_LINK_REGISTER },
+        { "b", BRANCH_UNCONDITIONAL },
+        { "beq", BRANCH_EQUALS },
+        { "bne", BRANCH_NOT_EQUALS },
+        { "blt", BRANCH_LESS_THAN },
+        { "bgt", BRANCH_GREATER_THAN },
+        { "ble", BRANCH_LESS_THAN_OR_EQUALS },
+        { "bge", BRANCH_GREATER_THAN_OR_EQUALS },
+        { "li", LOAD_IMMEDIATE },
+        { "la", LOAD_ADDRESS },
+        { "lw", LOAD_WORD },
+        { "sw", SAVE_WORD },
+        { "lb", LOAD_BYTE },
+        { "sb", SAVE_BYTE },
+        { "sys", SYSTEM_CALL },
+        { "add", ADD },
+        { "sub", SUB },
+        { "mul", MUL },
+        { "div", DIV },
+        { "mod", MOD },
     };
 
     labelLocations.clear();
-    unresolvedLabelLocations.clear();
+    unresolvedAddressLocations.clear();
 
     std::ifstream sourceFile(sourcePath);
     std::ofstream programFile(programPath, std::ios::binary);
@@ -46,14 +51,15 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
     std::string current;
     while (sourceFile >> current)
     {
-        if (INSTRUCTION_FORMATS.count(current))
+        if (INSTRUCTION_NAMES.count(current))
         {
-            std::pair<std::uint32_t, std::uint32_t> instructionData = INSTRUCTION_FORMATS.at(current);
-            std::uint32_t instruction = instructionData.first << OPCODE_OFFSET;
+            std::uint32_t opcode = INSTRUCTION_NAMES.at(current);
+            std::uint32_t instructionFormat = INSTRUCTION_FORMATS.at(opcode);
+            std::uint32_t instruction = opcode << OPCODE_OFFSET;
 
             for (int i = 0; i < 3; i++)
             {
-                if (instructionData.second & (Register0 << i))
+                if (instructionFormat & (Register0 << i))
                 {
                     std::string reg;
                     sourceFile >> reg;
@@ -61,28 +67,13 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
                 }
             }
 
-            if (instructionData.second & DirectAddressAbsolute)
+            if (instructionFormat & AnyAddress)
             {
-                std::string label;
-                sourceFile >> label;
-                instruction |= getLabelLocation(programFile.tellp(), label);
+                std::string address;
+                sourceFile >> address;
+                instruction = resolveAddress(programFile.tellp(), address, instructionFormat & AnyAddress, instruction);
             }
-
-            if (instructionData.second & DirectAddressOffset)
-            {
-                std::string label;
-                sourceFile >> label;
-                instruction |= getLabelLocation(programFile.tellp(), label);
-            }
-
-            if (instructionData.second & IndirectAddressOffset)
-            {
-                std::string label;
-                sourceFile >> label;
-                instruction |= getLabelLocation(programFile.tellp(), label);
-            }
-
-            if (instructionData.second & Immediate)
+            else if (instructionFormat & Immediate)
             {
                 std::uint32_t immediate;
                 sourceFile >> immediate;
@@ -109,6 +100,17 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
             sourceFile >> spaces;
             programFile.seekp(spaces);
         }
+        else if (current == "align")
+        {
+            unsigned int alignmentPower;
+            sourceFile >> alignmentPower;
+            unsigned int alignment = 1;
+            for (int i = 0; i < alignmentPower; i++)
+            {
+                alignment *= 2;
+            }
+            programFile.seekp(programFile.tellp() % alignment);
+        }
         else if (current[0] == '#')
         {
             sourceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -124,16 +126,33 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
         }
     }
 
-    for (std::pair<std::uint32_t, std::string> entry : unresolvedLabelLocations)
+    for (UnresolvedAddressLocation unresolvedAddressLocation : unresolvedAddressLocations)
     {
-        if (labelLocations.count(entry.second))
+        if (labelLocations.count(unresolvedAddressLocation.label))
         {
-            programFile.seekp(entry.first, std::ios::beg);
-            programFile.write(reinterpret_cast<char*>(&labelLocations[entry.second]), 2);
+            programFile.seekp(unresolvedAddressLocation.location, std::ios::beg);
+            std::uint32_t instruction = unresolvedAddressLocation.instruction;
+
+            switch (unresolvedAddressLocation.type)
+            {
+            case DirectAddressAbsolute:
+                instruction |= labelLocations.at(unresolvedAddressLocation.label);
+                break;
+            case DirectAddressOffset:
+                instruction |= labelLocations.at(unresolvedAddressLocation.label) - unresolvedAddressLocation.location;
+                break;
+            case IndirectAddressAbsolute:
+                instruction |= (instruction & DIRECT_ADDRESS_OFFSET_MASK) + labelLocations.at(unresolvedAddressLocation.label);
+                break;
+            default:
+                break;
+            }
+
+            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
         }
         else
         {
-            throw std::exception(std::string("Unresolved label: " + entry.second).c_str());
+            throw std::exception(std::string("Unresolved label: " + unresolvedAddressLocation.label).c_str());
         }
     }
 }
@@ -177,19 +196,39 @@ std::uint32_t Assembler::resolveRegisterName(const std::string& registerName, st
     return registerId << (REGISTER_0_OFFSET - REGISTER_BIT * registerSlot);
 }
 
-void Assembler::setLabelLocation(const std::string& labelName, std::uint16_t labelLocation)
+void Assembler::setLabelLocation(const std::string& labelName, std::uint32_t labelLocation)
 {
     labelLocations[labelName] = labelLocation;
 }
 
-std::uint16_t Assembler::getLabelLocation(std::uint32_t instructionLocation, const std::string& labelName)
+std::uint32_t Assembler::resolveAddress(std::uint32_t instructionLocation, const std::string& address, std::uint32_t type, std::uint32_t instruction)
 {
-    if (labelLocations.count(labelName))
+    switch (type)
     {
-        return labelLocations.at(labelName);
+    case DirectAddressAbsolute:
+        if (labelLocations.count(address))
+        {
+            return instruction | labelLocations.at(address);
+        }
+        break;
+    case DirectAddressOffset:
+        if (labelLocations.count(address))
+        {
+            return instruction | (labelLocations.at(address) - instructionLocation);
+        }
+        break;
+    case IndirectAddressAbsolute:
+        if (labelLocations.count(address))
+        {
+            return instruction | labelLocations.at(address);
+        }
+        break;
+        //return instruction | resolveRegisterName(address, 1);
+        break;
+    default:
+        break;
     }
 
-    unresolvedLabelLocations.insert(std::pair<std::uint32_t, std::string>(instructionLocation, labelName));
-
-    return 0;
+    unresolvedAddressLocations.push_back({ instructionLocation, address, type, instruction });
+    return instruction;
 }

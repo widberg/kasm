@@ -2,8 +2,11 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <exception>
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <unordered_map>
 
 #include "common.hpp"
 
@@ -28,7 +31,18 @@ int VirtualMachine::execute()
     while (pc < program.size())
     {
         std::uint32_t instruction = *reinterpret_cast<std::uint32_t*>(program.data() + pc);
-        switch (extractOpcode(instruction))
+
+        InstructionData d = { instruction };
+
+        std::uint32_t instructionFormat = INSTRUCTION_FORMATS.at(d.opcode);
+
+        std::uint32_t address;
+        if (instructionFormat & AnyAddress)
+        {
+            address = extractAddress(instruction, instructionFormat & AnyAddress);
+        }
+
+        switch (d.opcode)
         {
         case NOP:
             advancePc();
@@ -38,23 +52,76 @@ int VirtualMachine::execute()
             advancePc();
             break;
         case JUMP:
-            pc = extractAddress(instruction);
+            pc = address;
             break;
         case JUMP_REGISTER:
-            pc = getRegister(extractRegister(instruction, 0));
+            pc = getRegister(d.register0);
             break;
         case JUMP_AND_LINK:
             registers[RA] = pc + INSTRUCTION_SIZE;
-            pc = extractAddress(instruction);
+            pc = address;
             break;
         case JUMP_AND_LINK_REGISTER:
-            registers[RA] = pc + 4;
-            pc = getRegister(extractRegister(instruction, 0));
+            registers[RA] = pc + INSTRUCTION_SIZE;
+            pc = getRegister(d.register0);
+            break;
+        case BRANCH_UNCONDITIONAL:
+            pc = address;
             break;
         case BRANCH_EQUALS:
-            if (getRegister(extractRegister(instruction, 0)) == getRegister(extractRegister(instruction, 1)))
+            if (getRegister(d.register0) == getRegister(d.register1))
             {
-                pc = extractAddress(instruction);
+                pc = address;
+            }
+            else
+            {
+                advancePc();
+            }
+            break;
+        case BRANCH_NOT_EQUALS:
+            if (getRegister(d.register0) != getRegister(d.register1))
+            {
+                pc = address;
+            }
+            else
+            {
+                advancePc();
+            }
+            break;
+        case BRANCH_LESS_THAN:
+            if (getRegister(d.register0) < getRegister(d.register1))
+            {
+                pc = address;
+            }
+            else
+            {
+                advancePc();
+            }
+            break;
+        case BRANCH_GREATER_THAN:
+            if (getRegister(d.register0) > getRegister(d.register1))
+            {
+                pc = address;
+            }
+            else
+            {
+                advancePc();
+            }
+            break;
+        case BRANCH_LESS_THAN_OR_EQUALS:
+            if (getRegister(d.register0) <= getRegister(d.register1))
+            {
+                pc = address;
+            }
+            else
+            {
+                advancePc();
+            }
+            break;
+        case BRANCH_GREATER_THAN_OR_EQUALS:
+            if (getRegister(d.register0) >= getRegister(d.register1))
+            {
+                pc = address;
             }
             else
             {
@@ -62,27 +129,52 @@ int VirtualMachine::execute()
             }
             break;
         case LOAD_IMMEDIATE:
-            setRegister(extractRegister(instruction, 0), extractImmediate(instruction));
+            setRegister(d.register0, d.immediate);
             advancePc();
             break;
         case LOAD_ADDRESS:
-            setRegister(extractRegister(instruction, 0), extractAddress(instruction));
+            setRegister(d.register0, address);
             advancePc();
             break;
         case LOAD_WORD:
-            setRegister(extractRegister(instruction, 0), *reinterpret_cast<std::uint32_t*>(program.data() + extractAddress(instruction)));
+            setRegister(d.register0, *reinterpret_cast<std::uint32_t*>(program.data() + address));
             advancePc();
             break;
         case SAVE_WORD:
-            *reinterpret_cast<std::uint32_t*>(program.data() + extractAddress(instruction)) = getRegister(extractRegister(instruction, 0));
+            *reinterpret_cast<std::uint32_t*>(program.data() + address) = getRegister(d.register0);
+            advancePc();
+            break;
+        case LOAD_BYTE:
+            setRegister(d.register0, program[address]);
+            advancePc();
+            break;
+        case SAVE_BYTE:
+            program[address] = getRegister(d.register0);
             advancePc();
             break;
         case ADD:
-            setRegister(extractRegister(instruction, 0), getRegister(extractRegister(instruction, 1)) + getRegister(extractRegister(instruction, 2)));
+            setRegister(d.register0, getRegister(d.register1) + getRegister(d.register2));
+            advancePc();
+            break;
+        case SUB:
+            setRegister(d.register0, getRegister(d.register1) - getRegister(d.register2));
+            advancePc();
+            break;
+        case MUL:
+            setRegister(d.register0, getRegister(d.register1) * getRegister(d.register2));
+            advancePc();
+            break;
+        case DIV:
+            setRegister(d.register0, getRegister(d.register1) / getRegister(d.register2));
+            advancePc();
+            break;
+        case MOD:
+            setRegister(d.register0, getRegister(d.register1) % getRegister(d.register2));
             advancePc();
             break;
         default:
-            return -1;
+            throw std::exception(std::string("Illegal Opcode: " + d.opcode).c_str());
+            break;
         }
     }
 
@@ -94,7 +186,7 @@ void VirtualMachine::loadProgram(const std::string& programPath)
     std::ifstream programFile(programPath, std::ios::ate | std::ios::binary);
     program.resize(programFile.tellg());
     programFile.seekg(0, std::ios::beg);
-    programFile.read(reinterpret_cast<char*>(program.data()), program.capacity());
+    programFile.read(reinterpret_cast<char*>(program.data()), program.size());
 }
 
 void VirtualMachine::systemCall()
@@ -114,24 +206,28 @@ void VirtualMachine::systemCall()
     }
 }
 
-std::uint32_t VirtualMachine::extractOpcode(std::uint32_t instruction)
-{
-    return (instruction >> OPCODE_OFFSET) & OPCODE_MASK;
-}
-
 std::uint32_t VirtualMachine::extractRegister(std::uint32_t instruction, int registerSlot)
 {
     return (instruction >> (REGISTER_0_OFFSET - REGISTER_BIT * registerSlot)) & REGISTER_MASK;
 }
 
-std::uint32_t VirtualMachine::extractAddress(std::uint32_t instruction)
+std::uint32_t VirtualMachine::extractAddress(std::uint32_t instruction, std::uint32_t type)
 {
-    return (instruction >> ADDRESS_OFFSET) & RELATIVE_ADDRESS_MASK;
-}
-
-std::uint32_t VirtualMachine::extractImmediate(std::uint32_t instruction)
-{
-    return (instruction >> IMMEDIATE_OFFSET) & IMMEDIATE_MASK;
+    switch (type)
+    {
+    case DirectAddressAbsolute:
+        return instruction & DIRECT_ADDRESS_ABSOLUTE_MASK;
+        break;
+    case DirectAddressOffset:
+        return (instruction & DIRECT_ADDRESS_OFFSET_MASK) + pc;
+        break;
+    case IndirectAddressAbsolute:
+        return getRegister(extractRegister(instruction, 1)) + (instruction & DIRECT_ADDRESS_OFFSET_MASK);
+        break;
+    default:
+        break;
+    }
+    return 0;
 }
 
 void VirtualMachine::setRegister(std::uint32_t reg, std::uint32_t value)

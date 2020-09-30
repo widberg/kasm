@@ -16,10 +16,8 @@ public:
 private:
 	void advancePc();
 	void systemCall();
-	std::uint32_t extractOpcode(std::uint32_t instruction);
 	std::uint32_t extractRegister(std::uint32_t instruction, int registerSlot);
-	std::uint32_t extractAddress(std::uint32_t instruction);
-	std::uint32_t extractImmediate(std::uint32_t instruction);
+	std::uint32_t extractAddress(std::uint32_t instruction, std::uint32_t type);
 	void setRegister(std::uint32_t reg, std::uint32_t value);
 	std::uint32_t getRegister(std::uint32_t reg);
 
@@ -32,6 +30,10 @@ private:
 	{
 		EXIT,
 		READ_INT,
-		WRITE_INT
+		WRITE_INT,
+		READ_CHAR,
+		WRITE_CHAR,
+		READ_STRING,
+		WRITE_STRING,
 	};
 };
