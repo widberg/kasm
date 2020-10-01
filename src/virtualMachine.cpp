@@ -5,6 +5,7 @@
 #include <exception>
 #include <fstream>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <unordered_map>
 
@@ -37,9 +38,19 @@ int VirtualMachine::execute()
         std::uint32_t instructionFormat = INSTRUCTION_FORMATS.at(d.opcode);
 
         std::uint32_t address;
-        if (instructionFormat & AnyAddress)
+        switch (instructionFormat & AnyAddress)
         {
-            address = extractAddress(instruction, instructionFormat & AnyAddress);
+        case DirectAddressAbsolute:
+            address = d.directAddressAbsolute;
+            break;
+        case DirectAddressOffset:
+            address = d.directAddressOffset + pc;
+            break;
+        case IndirectAddressAbsolute:
+            address = getRegister(d.register1) + d.directAddressOffset;
+            break;
+        default:
+            break;
         }
 
         switch (d.opcode)
@@ -187,6 +198,22 @@ void VirtualMachine::loadProgram(const std::string& programPath)
     program.resize(programFile.tellg());
     programFile.seekg(0, std::ios::beg);
     programFile.read(reinterpret_cast<char*>(program.data()), program.size());
+
+    std::cout << "Loaded program: " << programPath << std::endl;
+    std::cout << "--- BEGIN PROGRAM MEMORY ---" << std::endl;
+    for (int i = 0; i < program.size() / INSTRUCTION_SIZE; i++)
+    {
+        std::cout << "0x" << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<std::uint32_t*>(program.data() + i * INSTRUCTION_SIZE);
+        if ((i + 1) % 8 && i < program.size() / INSTRUCTION_SIZE - 1)
+        {
+            std::cout << " ";
+        }
+        else
+        {
+            std::cout << std::endl;
+        }
+    }
+    std::cout << "---  END PROGRAM MEMORY  ---" << std::endl;
 }
 
 void VirtualMachine::systemCall()
@@ -201,33 +228,35 @@ void VirtualMachine::systemCall()
     case WRITE_INT:
         std::cout << registers[A0];
         break;
+    case READ_CHAR:
+        std::cin >> reinterpret_cast<char&>(registers[A0]);
+        break;
+    case WRITE_CHAR:
+        std::cout << static_cast<char>(registers[A0]);
+        break;
+    case READ_STRING:
+        if (registers[A1] < 1)
+        {
+            break;
+        }
+        else
+        {
+            char c;
+            unsigned int i = 0;
+            while ((c = std::cin.get()) != '\n' && i < registers[A1] - 1)
+            {
+                *reinterpret_cast<char*>(program.data() + registers[A0] + i) = c;
+                i++;
+            }
+            *reinterpret_cast<char*>(program.data() + registers[A0] + i) = '\0';
+        }
+        break;
+    case WRITE_STRING:
+        std::cout << reinterpret_cast<char*>(program.data() + registers[A0]);
+        break;
     default:
         break;
     }
-}
-
-std::uint32_t VirtualMachine::extractRegister(std::uint32_t instruction, int registerSlot)
-{
-    return (instruction >> (REGISTER_0_OFFSET - REGISTER_BIT * registerSlot)) & REGISTER_MASK;
-}
-
-std::uint32_t VirtualMachine::extractAddress(std::uint32_t instruction, std::uint32_t type)
-{
-    switch (type)
-    {
-    case DirectAddressAbsolute:
-        return instruction & DIRECT_ADDRESS_ABSOLUTE_MASK;
-        break;
-    case DirectAddressOffset:
-        return (instruction & DIRECT_ADDRESS_OFFSET_MASK) + pc;
-        break;
-    case IndirectAddressAbsolute:
-        return getRegister(extractRegister(instruction, 1)) + (instruction & DIRECT_ADDRESS_OFFSET_MASK);
-        break;
-    default:
-        break;
-    }
-    return 0;
 }
 
 void VirtualMachine::setRegister(std::uint32_t reg, std::uint32_t value)

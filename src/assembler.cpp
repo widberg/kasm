@@ -80,25 +80,32 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
                 instruction |= immediate;
             }
 
+            programFile.seekp(align(programFile.tellp(), INSTRUCTION_SIZE), std::ios::cur);
             programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
         }
         else if (current == "word")
         {
             std::uint32_t data;
             sourceFile >> data;
+            programFile.seekp(align(programFile.tellp(), INSTRUCTION_SIZE), std::ios::cur);
             programFile.write(reinterpret_cast<char*>(&data), INSTRUCTION_SIZE);
         }
         else if (current == "byte")
         {
-            std::uint8_t data;
-            sourceFile >> data;
+            int number;
+            sourceFile >> number;
+            std::int8_t data = static_cast<std::int8_t>(number);
             programFile.write(reinterpret_cast<char*>(&data), 1);
         }
         else if (current == "space")
         {
             unsigned int spaces;
             sourceFile >> spaces;
-            programFile.seekp(spaces);
+            if (spaces > 0)
+            {
+                programFile.seekp(spaces - 1, std::ios::cur);
+                programFile.write("", 1);
+            }
         }
         else if (current == "align")
         {
@@ -109,7 +116,22 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
             {
                 alignment *= 2;
             }
-            programFile.seekp(programFile.tellp() % alignment);
+            programFile.seekp(align(programFile.tellp(), alignment), std::ios::cur);
+        }
+        else if (current == "asciiz")
+        {
+            sourceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\"');
+            std::uint32_t start = sourceFile.tellg();
+            sourceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\"');
+            std::uint32_t end = sourceFile.tellg();
+            sourceFile.seekg(start);
+            int size = end - start - 1;
+            char* data = new char[size + 1];
+            sourceFile.read(data, size);
+            data[size] = 0;
+            programFile.write(reinterpret_cast<char*>(data), size + 1);
+            delete[] data;
+            sourceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\"');
         }
         else if (current[0] == '#')
         {
@@ -154,6 +176,13 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
         {
             throw std::exception(std::string("Unresolved label: " + unresolvedAddressLocation.label).c_str());
         }
+    }
+
+    programFile.seekp(0, std::ios::end);
+
+    while (programFile.tellp() % INSTRUCTION_SIZE)
+    {
+        programFile.write("", 1);
     }
 }
 
@@ -231,4 +260,10 @@ std::uint32_t Assembler::resolveAddress(std::uint32_t instructionLocation, const
 
     unresolvedAddressLocations.push_back({ instructionLocation, address, type, instruction });
     return instruction;
+}
+
+unsigned int Assembler::align(unsigned int value, unsigned int alignment)
+{
+    unsigned int r = value % alignment;
+    return r ? alignment - r : 0;
 }

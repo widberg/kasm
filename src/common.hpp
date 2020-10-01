@@ -15,12 +15,8 @@ const std::uint32_t OPCODE_OFFSET = INSTRUCTION_BIT - OPCODE_BIT;
 const std::uint32_t REGISTER_0_OFFSET = OPCODE_OFFSET - REGISTER_BIT;
 const std::uint32_t REGISTER_1_OFFSET = REGISTER_0_OFFSET - REGISTER_BIT;
 const std::uint32_t REGISTER_2_OFFSET = REGISTER_1_OFFSET - REGISTER_BIT;
-const std::uint32_t ADDRESS_OFFSET = 0;
-const std::uint32_t IMMEDIATE_OFFSET = 0;
 
-const std::uint32_t REGISTER_MASK = 0b11111;
 const std::uint32_t DIRECT_ADDRESS_OFFSET_MASK = 0xFFFF;
-const std::uint32_t DIRECT_ADDRESS_ABSOLUTE_MASK = 0x03FFFFFF;
 
 union InstructionData
 {
@@ -129,28 +125,28 @@ enum Token
 };
 
 const static std::unordered_map<std::uint32_t, std::uint32_t> INSTRUCTION_FORMATS = {
-        { NOP, None },
-        { JUMP, DirectAddressAbsolute },
-        { JUMP_REGISTER, Register0 },
-        { JUMP_AND_LINK, DirectAddressAbsolute },
-        { JUMP_AND_LINK_REGISTER, Register0 | Register1 },
-        { BRANCH_UNCONDITIONAL, DirectAddressOffset },
-        { BRANCH_EQUALS, Register0 | Register1 | DirectAddressOffset },
-        { BRANCH_NOT_EQUALS, Register0 | Register1 | DirectAddressOffset },
-        { BRANCH_LESS_THAN, Register0 | Register1 | DirectAddressOffset },
-        { BRANCH_GREATER_THAN, Register0 | Register1 | DirectAddressOffset },
-        { BRANCH_LESS_THAN_OR_EQUALS, Register0 | Register1 | DirectAddressOffset },
-        { BRANCH_GREATER_THAN_OR_EQUALS, Register0 | Register1 | DirectAddressOffset },
-        { LOAD_IMMEDIATE, Register0 | Immediate },
-        { LOAD_ADDRESS, Register0 | IndirectAddressAbsolute },
-        { LOAD_WORD, Register0 | IndirectAddressAbsolute },
-        { SAVE_WORD, Register0 | IndirectAddressAbsolute },
-        { LOAD_BYTE, Register0 | IndirectAddressAbsolute },
-        { SAVE_BYTE, Register0 | IndirectAddressAbsolute },
-        { SYSTEM_CALL, None},
-        { ADD, Register0 | Register1 | Register2 },
-        { SUB, Register0 | Register1 | Register2 },
-        { MUL, Register0 | Register1 | Register2 },
-        { DIV, Register0 | Register1 | Register2 },
-        { MOD, Register0 | Register1 | Register2 },
+    { NOP, None },
+    { JUMP, DirectAddressAbsolute },
+    { JUMP_REGISTER, Register0 },
+    { JUMP_AND_LINK, DirectAddressAbsolute },
+    { JUMP_AND_LINK_REGISTER, Register0 | Register1 },
+    { BRANCH_UNCONDITIONAL, DirectAddressOffset },
+    { BRANCH_EQUALS, Register0 | Register1 | DirectAddressOffset },
+    { BRANCH_NOT_EQUALS, Register0 | Register1 | DirectAddressOffset },
+    { BRANCH_LESS_THAN, Register0 | Register1 | DirectAddressOffset },
+    { BRANCH_GREATER_THAN, Register0 | Register1 | DirectAddressOffset },
+    { BRANCH_LESS_THAN_OR_EQUALS, Register0 | Register1 | DirectAddressOffset },
+    { BRANCH_GREATER_THAN_OR_EQUALS, Register0 | Register1 | DirectAddressOffset },
+    { LOAD_IMMEDIATE, Register0 | Immediate },
+    { LOAD_ADDRESS, Register0 | DirectAddressOffset },
+    { LOAD_WORD, Register0 | IndirectAddressAbsolute },
+    { SAVE_WORD, Register0 | IndirectAddressAbsolute },
+    { LOAD_BYTE, Register0 | IndirectAddressAbsolute },
+    { SAVE_BYTE, Register0 | IndirectAddressAbsolute },
+    { SYSTEM_CALL, None},
+    { ADD, Register0 | Register1 | Register2 },
+    { SUB, Register0 | Register1 | Register2 },
+    { MUL, Register0 | Register1 | Register2 },
+    { DIV, Register0 | Register1 | Register2 },
+    { MOD, Register0 | Register1 | Register2 },
 };

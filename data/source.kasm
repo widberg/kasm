@@ -1,4 +1,26 @@
 #	instructions
+	li v0 6
+	la a0 msg
+	sys
+	li v0 4
+	li a0 10
+	sys
+	li v0 6
+	la a0 bruh
+	sys
+	li v0 4
+	li a0 10
+	sys
+	li v0 6
+	la a0 prompt
+	sys
+	li v0 5
+	la a0 msg
+	li a1 5
+	sys
+	li v0 6
+	la a0 msg
+	sys
 	li v0 0   # systemCallType = EXIT
 	jal func  # func()
 	lw a0 ret # exitCode = *ret
@@ -13,3 +35,12 @@ func:
 #	data
 ret:
 	space 4   # reserve 1 word of space in memory
+msg:
+	asciiz "yeet"
+bruh:
+	asciiz "bruh"
+prompt:
+	asciiz "Type something: "
+	word 4
+	byte 1
+	byte 2
