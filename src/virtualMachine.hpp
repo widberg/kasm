@@ -33,5 +33,7 @@ private:
 		WRITE_CHAR,
 		READ_STRING,
 		WRITE_STRING,
+		ALLOCATE,
+		DEALLOCATE,
 	};
 };

@@ -29,6 +29,9 @@ int VirtualMachine::execute()
     std::fill(std::begin(registers), std::end(registers), 0);
     pc = 0;
 
+    std::uint8_t* stack = new std::uint8_t[144];
+    registers[SP] = registers[FP] = reinterpret_cast<std::uint32_t>(stack + 144 - 1);
+
     while (pc < program.size())
     {
         std::uint32_t instruction = *reinterpret_cast<std::uint32_t*>(program.data() + pc);
@@ -184,10 +187,12 @@ int VirtualMachine::execute()
             advancePc();
             break;
         default:
-            throw std::exception(std::string("Illegal Opcode: " + d.opcode).c_str());
+            throw std::exception(std::string("Illegal opcode: " + d.opcode).c_str());
             break;
         }
     }
+
+    delete[] stack;
 
     return 0;
 }
@@ -255,7 +260,14 @@ void VirtualMachine::systemCall()
     case WRITE_STRING:
         std::cout << reinterpret_cast<char*>(program.data() + registers[A0]);
         break;
+    case ALLOCATE:
+        registers[V0] = reinterpret_cast<std::uint32_t>(new std::uint8_t[registers[A0]]);
+        break;
+    case DEALLOCATE:
+        delete[] reinterpret_cast<std::uint8_t*>(registers[A0]);
+        break;
     default:
+        throw std::exception(std::string("Illegal system call: " + registers[V0]).c_str());
         break;
     }
 }

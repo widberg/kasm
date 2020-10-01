@@ -55,7 +55,8 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
         {
             std::uint32_t opcode = INSTRUCTION_NAMES.at(current);
             std::uint32_t instructionFormat = INSTRUCTION_FORMATS.at(opcode);
-            std::uint32_t instruction = opcode << OPCODE_OFFSET;
+            InstructionData instruction = { 0 };
+            instruction.opcode = opcode;
 
             for (int i = 0; i < 3; i++)
             {
@@ -63,7 +64,7 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
                 {
                     std::string reg;
                     sourceFile >> reg;
-                    instruction |= resolveRegisterName(reg, i);
+                    instruction.instruction |= resolveRegisterName(reg, i);
                 }
             }
 
@@ -71,13 +72,13 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
             {
                 std::string address;
                 sourceFile >> address;
-                instruction = resolveAddress(programFile.tellp(), address, instructionFormat & AnyAddress, instruction);
+                instruction.instruction = resolveAddress(programFile.tellp(), address, instructionFormat & AnyAddress, instruction.instruction);
             }
             else if (instructionFormat & Immediate)
             {
                 std::uint32_t immediate;
                 sourceFile >> immediate;
-                instruction |= immediate;
+                instruction.immediate |= immediate;
             }
 
             programFile.seekp(align(programFile.tellp(), INSTRUCTION_SIZE), std::ios::cur);
