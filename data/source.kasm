@@ -1,32 +1,56 @@
 #	instructions
-	li v0 6
-	la a0 msg
-	sys
-	li v0 4
-	li a0 10
-	sys
-	li v0 6
+main:
+	li v0 6        # bruh
 	la a0 bruh
 	sys
-	li v0 4
+	li v0 4        # new line
 	li a0 10
 	sys
+ask:
+	li v0 6        # ask y/n
+	la a0 prompt_a
+	sys
+	li v0 3        # ans
+	sys
+
+	# no
+	li t0 78
+	beq a0 t0 skip
+	li t0 110
+	beq a0 t0 skip
+	
+	# yes
+	li t0 89
+	beq a0 t0 yes
+	li t0 121
+	beq a0 t0 yes
+
+	# invalid
+	j ask
+yes:
 	li v0 6
 	la a0 prompt
 	sys
 	li v0 5
 	la a0 msg
-	li a1 5
+	li a1 32
 	sys
 	li v0 6
 	la a0 msg
 	sys
+	li v0 4        # new line
+	li a0 10
+	sys
+	j ask
+skip:
 	li v0 0   # systemCallType = EXIT
 	jal func  # func()
 	lw a0 ret # exitCode = *ret
 	li t0 1
 	add a0 a0 t0
 	sys       # systemCall(systemCallType, exitCode)
+
+# void func(void)
 func:
 	li t0 2   # tmp = 2
 	sw t0 ret # *ret = tmp
@@ -36,11 +60,15 @@ func:
 ret:
 	space 4   # reserve 1 word of space in memory
 msg:
-	asciiz "yeet"
+	space 32
 bruh:
 	asciiz "bruh"
+prompt_a:
+	asciiz "Would you like to type something? (y/n): "
 prompt:
 	asciiz "Type something: "
+some_trash:
 	word 4
 	byte 1
 	byte 2
+	word 3

@@ -230,6 +230,7 @@ void VirtualMachine::systemCall()
         break;
     case READ_CHAR:
         std::cin >> reinterpret_cast<char&>(registers[A0]);
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         break;
     case WRITE_CHAR:
         std::cout << static_cast<char>(registers[A0]);
