@@ -1,6 +1,4 @@
-void entry()
-{
-	x : 8U;
-	x = 1;
-	x = x + x;
-}
+x : uint8;
+x = 1;
+x = x + x + x;
+return x;

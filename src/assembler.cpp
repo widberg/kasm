@@ -3,6 +3,7 @@
 #include <exception>
 #include <fstream>
 
+#include "binaryBuilder.hpp"
 #include "common.hpp"
 
 Assembler::Assembler()
@@ -46,7 +47,7 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
     unresolvedAddressLocations.clear();
 
     std::ifstream sourceFile(sourcePath);
-    std::ofstream programFile(programPath, std::ios::binary);
+    BinaryBuilder binary(programPath);
 
     std::string current;
     while (sourceFile >> current)
@@ -72,7 +73,7 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
             {
                 std::string address;
                 sourceFile >> address;
-                instruction.instruction = resolveAddress(programFile.tellp(), address, instructionFormat & AnyAddress, instruction.instruction);
+                instruction.instruction = resolveAddress(binary.getLocation(), address, instructionFormat & AnyAddress, instruction.instruction);
             }
             else if (instructionFormat & Immediate)
             {
@@ -81,32 +82,28 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
                 instruction.immediate |= immediate;
             }
 
-            programFile.seekp(align(programFile.tellp(), INSTRUCTION_SIZE), std::ios::cur);
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
+            binary.align(INSTRUCTION_SIZE);
+            binary.writeWord(instruction.instruction);
         }
         else if (current == "word")
         {
             std::uint32_t data;
             sourceFile >> data;
-            programFile.seekp(align(programFile.tellp(), INSTRUCTION_SIZE), std::ios::cur);
-            programFile.write(reinterpret_cast<char*>(&data), INSTRUCTION_SIZE);
+            binary.align(INSTRUCTION_SIZE);
+            binary.writeWord(data);
         }
         else if (current == "byte")
         {
             int number;
             sourceFile >> number;
-            std::int8_t data = static_cast<std::int8_t>(number);
-            programFile.write(reinterpret_cast<char*>(&data), 1);
+            std::uint8_t data = reinterpret_cast<std::int8_t&>(number);
+            binary.writeByte(data);
         }
         else if (current == "space")
         {
             unsigned int spaces;
             sourceFile >> spaces;
-            if (spaces > 0)
-            {
-                programFile.seekp(spaces - 1, std::ios::cur);
-                programFile.write("", 1);
-            }
+            binary.pad(spaces);
         }
         else if (current == "align")
         {
@@ -117,7 +114,7 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
             {
                 alignment *= 2;
             }
-            programFile.seekp(align(programFile.tellp(), alignment), std::ios::cur);
+            binary.align(alignment);
         }
         else if (current == "asciiz")
         {
@@ -127,10 +124,10 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
             std::uint32_t end = sourceFile.tellg();
             sourceFile.seekg(start);
             int size = end - start - 1;
-            char* data = new char[size + 1];
-            sourceFile.read(data, size);
+            std::uint8_t* data = new std::uint8_t[size + 1];
+            sourceFile.read(reinterpret_cast<char*>(data), size);
             data[size] = 0;
-            programFile.write(reinterpret_cast<char*>(data), size + 1);
+            binary.writeData(data, size + 1);
             delete[] data;
             sourceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\"');
         }
@@ -141,7 +138,7 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
         else if (current[current.length() - 1] == ':')
         {
             current.pop_back();
-            labelLocations[current] = programFile.tellp();
+            labelLocations[current] = binary.getLocation();
         }
         else
         {
@@ -153,7 +150,7 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
     {
         if (labelLocations.count(unresolvedAddressLocation.label))
         {
-            programFile.seekp(unresolvedAddressLocation.location, std::ios::beg);
+            binary.setLocation(unresolvedAddressLocation.location);
             std::uint32_t instruction = unresolvedAddressLocation.instruction;
 
             switch (unresolvedAddressLocation.type)
@@ -171,7 +168,7 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
                 break;
             }
 
-            programFile.write(reinterpret_cast<char*>(&instruction), INSTRUCTION_SIZE);
+            binary.writeWord(instruction);
         }
         else
         {
@@ -179,12 +176,8 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
         }
     }
 
-    programFile.seekp(0, std::ios::end);
-
-    while (programFile.tellp() % INSTRUCTION_SIZE)
-    {
-        programFile.write("", 1);
-    }
+    binary.setLocation(BinaryBuilder::END);
+    binary.align(INSTRUCTION_SIZE);
 }
 
 std::uint32_t Assembler::resolveRegisterName(const std::string& registerName, std::uint32_t registerSlot)
@@ -261,10 +254,4 @@ std::uint32_t Assembler::resolveAddress(std::uint32_t instructionLocation, const
 
     unresolvedAddressLocations.push_back({ instructionLocation, address, type, instruction });
     return instruction;
-}
-
-unsigned int Assembler::align(unsigned int value, unsigned int alignment)
-{
-    unsigned int r = value % alignment;
-    return r ? alignment - r : 0;
 }

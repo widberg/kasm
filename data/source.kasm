@@ -43,6 +43,9 @@ yes:
 	sys
 	j ask
 skip:
+	li v0 6        # bye
+	la a0 bye
+	sys
 	li v0 0   # systemCallType = EXIT
 	jal func  # func()
 	lw a0 ret # exitCode = *ret
@@ -67,6 +70,8 @@ prompt_a:
 	asciiz "Would you like to type something? (y/n): "
 prompt:
 	asciiz "Type something: "
+bye:
+	asciiz "Thank you for running this program."
 some_trash:
 	word 4
 	byte 1

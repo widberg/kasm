@@ -15,7 +15,6 @@ private:
     std::uint32_t resolveRegisterName(const std::string& registerName, std::uint32_t registerSlot);
 	void setLabelLocation(const std::string& labelName, std::uint32_t labelLocation);
 	std::uint32_t resolveAddress(std::uint32_t instructionLocation, const std::string& address, std::uint32_t type, std::uint32_t instruction);
-	unsigned int align(unsigned int value, unsigned int alignment);
 
 	struct UnresolvedAddressLocation
 	{

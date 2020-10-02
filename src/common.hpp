@@ -2,6 +2,7 @@
 
 #include <climits>
 #include <cstdint>
+#include <unordered_map>
 
 const int INSTRUCTION_SIZE = sizeof(std::uint32_t);
 const int INSTRUCTION_BIT = CHAR_BIT * INSTRUCTION_SIZE;
