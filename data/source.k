@@ -1,4 +1,7 @@
-x : uint8;
-x = 1;
-x = x + x + x;
-return x;
+void entry()
+{
+	x : uint8;
+	x = 2;
+	x = x + x + x;
+	return x;
+}

@@ -26,17 +26,28 @@ private:
 		LITERAL,
 		FUNCTION_DEFINITION,
 		BINARY_OPERATOR,
-		UNARY_OPERATOR
+		UNARY_OPERATOR,
+		VARIABLE_DECLARATION,
+		IDENTIFIER,
+		TYPE
 	};
 
 	enum class BinaryOperator
 	{
-		ADD
+		ADD,
+		ASSIGNMENT
 	};
 
 	enum class UnaryOperator
 	{
 		NEGATE
+	};
+
+	enum class Type
+	{
+		VOID,
+		TYPE,
+		U8
 	};
 
 	struct ASTNode
@@ -60,7 +71,24 @@ private:
 			case ASTNodeType::LITERAL:
 				break;
 			case ASTNodeType::FUNCTION_DEFINITION:
+				delete asFunctionDefinition.identifier;
+				delete asFunctionDefinition.arguments;
 				delete asFunctionDefinition.body;
+				break;
+			case ASTNodeType::BINARY_OPERATOR:
+				delete asBinaryOperator.lhs;
+				delete asBinaryOperator.rhs;
+				break;
+			case ASTNodeType::UNARY_OPERATOR:
+				delete asUnaryOperator.rhs;
+				break;
+			case ASTNodeType::VARIABLE_DECLARATION:
+				delete asVariableDeclaration.identifier;
+				delete asVariableDeclaration.type;
+				break;
+			case ASTNodeType::IDENTIFIER:
+				break;
+			case ASTNodeType::TYPE:
 				break;
 			default:
 				break;
@@ -84,7 +112,8 @@ private:
 			} asLiteral;
 			struct
 			{
-				std::string name;
+				ASTNode* identifier;
+				ASTNode* type;
 				ASTNode* arguments;
 				ASTNode* body;
 			} asFunctionDefinition;
@@ -99,15 +128,31 @@ private:
 				UnaryOperator op;
 				ASTNode* rhs;
 			} asUnaryOperator;
+			struct
+			{
+				ASTNode* identifier;
+				ASTNode* type;
+			} asVariableDeclaration;
+			struct
+			{
+				std::string identifier;
+			} asIdentifier;
+			struct
+			{
+				Type type;
+			} asType;
 		};
 	};
 
 	ASTNode* makeCompoundStatement(const std::vector<ASTNode*>& statements) const;
 	ASTNode* makeReturn(ASTNode* expression) const;
 	ASTNode* makeLiteral(std::uint32_t value) const;
-	ASTNode* makeFunctionDefinition(const std::string& name, ASTNode*, ASTNode* body) const;
+	ASTNode* makeFunctionDefinition(ASTNode* identifier, ASTNode* type, ASTNode*, ASTNode* body) const;
 	ASTNode* makeBinaryOperator(BinaryOperator op, ASTNode* lhs, ASTNode* rhs) const;
 	ASTNode* makeUnaryOperator(UnaryOperator op, ASTNode* rhs) const;
+	ASTNode* makeVariableDeclaration(ASTNode* identifier, ASTNode* type) const;
+	ASTNode* makeIdentifier(const std::string& identifier) const;
+	ASTNode* makeType(Type type) const;
 
 	void Compiler::prettyPrint(const ASTNode* astNode, unsigned int level = 0) const;
 	void codeGeneration(const ASTNode* astNode);

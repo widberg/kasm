@@ -110,7 +110,7 @@ void Assembler::assemble(const std::string& asmPath, const std::string& programP
             unsigned int alignmentPower;
             sourceFile >> alignmentPower;
             unsigned int alignment = 1;
-            for (int i = 0; i < alignmentPower; i++)
+            for (unsigned int i = 0; i < alignmentPower; i++)
             {
                 alignment *= 2;
             }
@@ -119,11 +119,11 @@ void Assembler::assemble(const std::string& asmPath, const std::string& programP
         else if (current == "asciiz")
         {
             sourceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\"');
-            std::uint32_t start = sourceFile.tellg();
+            std::streamoff start = sourceFile.tellg();
             sourceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\"');
-            std::uint32_t end = sourceFile.tellg();
+            std::streamoff end = sourceFile.tellg();
             sourceFile.seekg(start);
-            int size = end - start - 1;
+            int size = static_cast<int>(end - start) - 1;
             std::uint8_t* data = new std::uint8_t[size + 1];
             sourceFile.read(reinterpret_cast<char*>(data), size);
             data[size] = 0;
@@ -207,7 +207,7 @@ std::uint32_t Assembler::resolveRegisterName(const std::string& registerName, st
     {
         registerId = std::stoi(registerName);
     }
-    catch (const std::exception& e)
+    catch (const std::exception&)
     {
     }
 

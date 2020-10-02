@@ -62,5 +62,6 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | 29 | sp | Stack Pointer |
 | 30 | fp | Frame Pointer |
 | 31 | ra | Return Address<sup>†</sup> |
+
 †<sub>Not preserved by subprograms.</sub>
 ‡<sub>Do not use.</sub>

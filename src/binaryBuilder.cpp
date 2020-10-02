@@ -44,7 +44,7 @@ void BinaryBuilder::pad(unsigned int size)
 
 long BinaryBuilder::getLocation()
 {
-	return programFile.tellp();
+	return static_cast<long>(programFile.tellp());
 }
 
 void BinaryBuilder::setLocation(long location)

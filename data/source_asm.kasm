@@ -1,5 +1,8 @@
 entry:
+	li t0 2
+	add t1 t0 zero
 	li t0 3
+	add t0 t0 t1
 	add t1 t0 zero
 	li t0 5
 	add t0 t0 t1

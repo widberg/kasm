@@ -22,8 +22,8 @@ const std::uint32_t DIRECT_ADDRESS_OFFSET_MASK = 0xFFFF;
 union InstructionData
 {
     std::uint32_t instruction;
+#pragma pack(push, 1)
 #if 'ABCD' == 0x41424344 // if little endian. trash code TODO: make portable
-#pragma pack(1)
     struct
     {
         std::uint32_t : 11;
@@ -36,7 +36,6 @@ union InstructionData
     std::uint32_t directAddressAbsolute : DIRECT_ADDRESS_ABSOLUTE_BIT;
     std::uint32_t directAddressOffset : DIRECT_ADDRESS_OFFSET_BIT;
 #else
-#pragma pack(1)
     struct
     {
         std::uint32_t opcode : OPCODE_BIT;
@@ -44,20 +43,17 @@ union InstructionData
         std::uint32_t register1 : REGISTER_BIT;
         std::uint32_t register2 : REGISTER_BIT;
     };
-#pragma pack(1)
     struct
     {
         std::uint32_t : OPCODE_BIT;
         std::uint32_t : REGISTER_BIT * 2;
         std::uint32_t immediate : IMMEDIATE_BIT;
     };
-#pragma pack(1)
     struct
     {
         std::uint32_t : OPCODE_BIT;
         std::uint32_t directAddressAbsolute : DIRECT_ADDRESS_ABSOLUTE_BIT;
     };
-#pragma pack(1)
     struct
     {
         std::uint32_t : OPCODE_BIT;
@@ -65,6 +61,7 @@ union InstructionData
         std::uint32_t directAddressOffset : DIRECT_ADDRESS_OFFSET_BIT;
     };
 #endif
+#pragma pack(pop)
 };
 
 enum Opcode : std::uint32_t
