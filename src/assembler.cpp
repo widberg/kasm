@@ -14,7 +14,7 @@ Assembler::~Assembler()
 {
 }
 
-void Assembler::assemble(const std::string& sourcePath, const std::string& programPath)
+void Assembler::assemble(const std::string& asmPath, const std::string& programPath)
 {
     const static std::unordered_map<std::string, std::uint32_t> INSTRUCTION_NAMES = {
         { "nop", NOP },
@@ -46,7 +46,7 @@ void Assembler::assemble(const std::string& sourcePath, const std::string& progr
     labelLocations.clear();
     unresolvedAddressLocations.clear();
 
-    std::ifstream sourceFile(sourcePath);
+    std::ifstream sourceFile(asmPath);
     BinaryBuilder binary(programPath);
 
     std::string current;

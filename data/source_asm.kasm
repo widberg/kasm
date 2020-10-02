@@ -1,0 +1,8 @@
+entry:
+	li t0 3
+	add t1 t0 zero
+	li t0 5
+	add t0 t0 t1
+	add a0 t0 zero
+	li v0 0
+	sys

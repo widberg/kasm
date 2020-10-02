@@ -10,7 +10,7 @@ public:
 	Assembler();
 	~Assembler();
 
-	void assemble(const std::string& sourcePath, const std::string& programPath);
+	void assemble(const std::string& asmPath, const std::string& programPath);
 private:
     std::uint32_t resolveRegisterName(const std::string& registerName, std::uint32_t registerSlot);
 	void setLabelLocation(const std::string& labelName, std::uint32_t labelLocation);
