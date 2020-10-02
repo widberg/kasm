@@ -43,7 +43,7 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 ### Instruction Set
 
 | Name | Operation | Encoding |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | Add | $d = $s + $t; advancePc(); | 0000 00dd ddds ssss tttt t--- ---- ---- |
 
 ### Registers
