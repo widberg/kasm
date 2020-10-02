@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <fstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 class Compiler
@@ -154,6 +155,9 @@ private:
 	ASTNode* makeIdentifier(const std::string& identifier) const;
 	ASTNode* makeType(Type type) const;
 
-	void Compiler::prettyPrint(const ASTNode* astNode, unsigned int level = 0) const;
+	std::unordered_map<std::string, ASTNode*> symbolTable;
+
+	void prettyPrint(const ASTNode* astNode, unsigned int level = 0) const;
+	void semanticAnalysis(const ASTNode* astNode);
 	void codeGeneration(const ASTNode* astNode);
 };

@@ -13,6 +13,8 @@ Compiler::~Compiler()
 
 void Compiler::compile(const std::string& sourcePath, const std::string& asmPath)
 {
+	symbolTable.clear();
+
 	std::ifstream sourceFile(sourcePath);
 	asmFile.open(asmPath);
 
@@ -20,15 +22,15 @@ void Compiler::compile(const std::string& sourcePath, const std::string& asmPath
 		makeCompoundStatement({
 			makeFunctionDefinition(makeIdentifier("entry"), makeType(Type::VOID), makeCompoundStatement({}), // void entry()
 			makeCompoundStatement({ // {
-				makeVariableDeclaration(makeIdentifier("x"), makeType(Type::U8)), // x : u8;
 				makeBinaryOperator(BinaryOperator::ASSIGNMENT, makeIdentifier("x"), makeLiteral(2)), // x = 2;
 				makeBinaryOperator(BinaryOperator::ASSIGNMENT, makeIdentifier("x"), makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(3))), // x = x + 3;
-				makeReturn(makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(5))) // return x + 5;
+				makeReturn(makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(5))), // return x + 5;
+				makeVariableDeclaration(makeIdentifier("x"), makeType(Type::U8)), // x : u8;
 			})) // }
 		});
 
 	prettyPrint(ast);
-
+	semanticAnalysis(ast);
 	codeGeneration(ast);
 
 	delete ast;
@@ -145,6 +147,7 @@ void Compiler::prettyPrint(const ASTNode* astNode, unsigned int level) const
 	case ASTNodeType::FUNCTION_DEFINITION:
 		std::cout << "FUNCTION_DEFINITION:" << std::endl;
 		prettyPrint(astNode->asFunctionDefinition.identifier, level + 1);
+		prettyPrint(astNode->asFunctionDefinition.type, level + 1);
 		prettyPrint(astNode->asFunctionDefinition.arguments, level + 1);
 		prettyPrint(astNode->asFunctionDefinition.body, level + 1);
 		break;
@@ -210,6 +213,11 @@ void Compiler::prettyPrint(const ASTNode* astNode, unsigned int level) const
 	}
 }
 
+void Compiler::semanticAnalysis(const ASTNode* astNode)
+{
+
+}
+
 void Compiler::codeGeneration(const ASTNode* astNode)
 {
 	switch (astNode->astNodeType)
@@ -244,7 +252,7 @@ void Compiler::codeGeneration(const ASTNode* astNode)
 			break;
 		case BinaryOperator::ASSIGNMENT:
 			codeGeneration(astNode->asBinaryOperator.rhs);
-			codeGeneration(astNode->asBinaryOperator.lhs);
+			writeLine("\tsb t0 " + astNode->asBinaryOperator.lhs->asIdentifier.identifier);
 			break;
 		default:
 			break;
@@ -261,8 +269,18 @@ void Compiler::codeGeneration(const ASTNode* astNode)
 		}
 		break;
 	case ASTNodeType::VARIABLE_DECLARATION:
+		writeLine(astNode->asVariableDeclaration.identifier->asIdentifier.identifier + ":");
+		switch (astNode->asVariableDeclaration.type->asType.type)
+		{
+		case Type::U8:
+			writeLine("\tspace 1");
+			break;
+		default:
+			break;
+		}
 		break;
 	case ASTNodeType::IDENTIFIER:
+		writeLine("\tlb t0 " + astNode->asIdentifier.identifier);
 		break;
 	default:
 		throw std::exception("Illegal ASTNodeType");

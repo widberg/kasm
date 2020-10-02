@@ -8,7 +8,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-* CMake >= 3.15
+* CMake >= 3.2
 
 ### Checkout
 
@@ -64,4 +64,5 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | 31 | ra | Return Address<sup>†</sup> |
 
 †<sub>Not preserved by subprograms.</sub>
+
 ‡<sub>Do not use.</sub>
