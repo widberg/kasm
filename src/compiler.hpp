@@ -22,7 +22,7 @@ private:
 	enum class ASTNodeType
 	{
 		INVALID,
-		COMPOUND_STATEMENT,
+		COMPOUND_NODE,
 		RETURN,
 		LITERAL,
 		FUNCTION_DEFINITION,
@@ -30,7 +30,11 @@ private:
 		UNARY_OPERATOR,
 		VARIABLE_DECLARATION,
 		IDENTIFIER,
-		TYPE
+		TYPE,
+		IF_THEN_ELSE,
+		WHILE,
+		DO_WHILE,
+		FOR
 	};
 
 	enum class BinaryOperator
@@ -60,14 +64,14 @@ private:
 		{
 			switch (astNodeType)
 			{
-			case ASTNodeType::COMPOUND_STATEMENT:
-				for (ASTNode* statement : asCompoundStatement.body)
+			case ASTNodeType::COMPOUND_NODE:
+				for (ASTNode* statement : asCompoundNode.body)
 				{
 					delete statement;
 				}
 				break;
 			case ASTNodeType::RETURN:
-				delete asReturn.expression;
+				delete asReturn.condition;
 				break;
 			case ASTNodeType::LITERAL:
 				break;
@@ -91,6 +95,24 @@ private:
 				break;
 			case ASTNodeType::TYPE:
 				break;
+			case ASTNodeType::IF_THEN_ELSE:
+				delete asIfThenElse.condition;
+				delete asIfThenElse.trueBody;
+				delete asIfThenElse.falseBody;
+				break;
+			case ASTNodeType::WHILE:
+				delete asWhile.condition;
+				delete asWhile.body;
+				break;
+			case ASTNodeType::DO_WHILE:
+				delete asDoWhile.condition;
+				delete asDoWhile.body;
+				break;
+			case ASTNodeType::FOR:
+				delete asFor.initialize;
+				delete asFor.condition;
+				delete asFor.increment;
+				delete asFor.body;
 			default:
 				break;
 			}
@@ -102,10 +124,10 @@ private:
 			struct
 			{
 				std::vector<ASTNode*> body;
-			} asCompoundStatement;
+			} asCompoundNode;
 			struct
 			{
-				ASTNode* expression;
+				ASTNode* condition;
 			} asReturn;
 			struct
 			{
@@ -142,10 +164,33 @@ private:
 			{
 				Type type;
 			} asType;
+			struct
+			{
+				ASTNode* condition;
+				ASTNode* trueBody;
+				ASTNode* falseBody;
+			} asIfThenElse;
+			struct
+			{
+				ASTNode* condition;
+				ASTNode* body;
+			} asWhile;
+			struct
+			{
+				ASTNode* condition;
+				ASTNode* body;
+			} asDoWhile;
+			struct
+			{
+				ASTNode* initialize;
+				ASTNode* condition;
+				ASTNode* increment;
+				ASTNode* body;
+			} asFor;
 		};
 	};
 
-	ASTNode* makeCompoundStatement(const std::vector<ASTNode*>& statements) const;
+	ASTNode* makeCompoundNode(const std::vector<ASTNode*>& nodes) const;
 	ASTNode* makeReturn(ASTNode* expression) const;
 	ASTNode* makeLiteral(std::uint32_t value) const;
 	ASTNode* makeFunctionDefinition(ASTNode* identifier, ASTNode* type, ASTNode*, ASTNode* body) const;
@@ -154,10 +199,15 @@ private:
 	ASTNode* makeVariableDeclaration(ASTNode* identifier, ASTNode* type) const;
 	ASTNode* makeIdentifier(const std::string& identifier) const;
 	ASTNode* makeType(Type type) const;
+	ASTNode* makeIfThenElse(ASTNode* condition, ASTNode* trueBody, ASTNode* falseBody);
+	ASTNode* makeWhile(ASTNode* condition, ASTNode* body);
+	ASTNode* makeDoWhile(ASTNode* condition, ASTNode* body);
+	ASTNode* makeFor(ASTNode* initialize, ASTNode* condition, ASTNode* increment, ASTNode* body);
 
 	std::unordered_map<std::string, ASTNode*> symbolTable;
 
 	void prettyPrint(const ASTNode* astNode, unsigned int level = 0) const;
 	void semanticAnalysis(const ASTNode* astNode);
+	void optimize(const ASTNode* astNode);
 	void codeGeneration(const ASTNode* astNode);
 };

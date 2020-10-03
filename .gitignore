@@ -36,3 +36,6 @@
 
 # kexe
 *.kexe
+
+# re2c
+*.cpp.re

@@ -1,0 +1,79 @@
+#	instructions
+main:
+	li v0 6        # bruh
+	la a0 bruh
+	sys
+	li v0 4        # new line
+	li a0 10
+	sys
+ask:
+	li v0 6        # ask y/n
+	la a0 prompt_a
+	sys
+	li v0 3        # ans
+	sys
+
+	# no
+	li t0 78
+	beq a0 t0 skip
+	li t0 110
+	beq a0 t0 skip
+	
+	# yes
+	li t0 89
+	beq a0 t0 yes
+	li t0 121
+	beq a0 t0 yes
+
+	# invalid
+	j ask
+yes:
+	li v0 6
+	la a0 prompt
+	sys
+	li v0 5
+	la a0 msg
+	li a1 32
+	sys
+	li v0 6
+	la a0 msg
+	sys
+	li v0 4        # new line
+	li a0 10
+	sys
+	j ask
+skip:
+	li v0 6        # bye
+	la a0 bye
+	sys
+	li v0 0   # systemCallType = EXIT
+	jal func  # func()
+	lw a0 ret # exitCode = *ret
+	li t0 1
+	add a0 a0 t0
+	sys       # systemCall(systemCallType, exitCode)
+
+# void func(void)
+func:
+	li t0 2   # tmp = 2
+	sw t0 ret # *ret = tmp
+	jr ra     # return
+
+#	data
+ret:
+	space 4   # reserve 1 word of space in memory
+msg:
+	space 32
+bruh:
+	asciiz "bruh"
+prompt_a:
+	asciiz "Would you like to type something? (y/n): "
+prompt:
+	asciiz "Type something: "
+bye:
+	asciiz "Thank you for running this program."
+some_trash:
+	word 4
+	byte 1
+	byte 2
+	word 3

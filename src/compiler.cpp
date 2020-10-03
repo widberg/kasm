@@ -19,14 +19,20 @@ void Compiler::compile(const std::string& sourcePath, const std::string& asmPath
 	asmFile.open(asmPath);
 
 	const ASTNode* ast =
-		makeCompoundStatement({
-			makeFunctionDefinition(makeIdentifier("entry"), makeType(Type::VOID), makeCompoundStatement({}), // void entry()
-			makeCompoundStatement({ // {
+		makeCompoundNode({
+			makeFunctionDefinition(makeIdentifier("entry"), makeType(Type::U8), makeCompoundNode({}), // u8 entry()
+			makeCompoundNode({ // {
+				makeVariableDeclaration(makeIdentifier("x"), makeType(Type::U8)), // x : u8;
 				makeBinaryOperator(BinaryOperator::ASSIGNMENT, makeIdentifier("x"), makeLiteral(2)), // x = 2;
 				makeBinaryOperator(BinaryOperator::ASSIGNMENT, makeIdentifier("x"), makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(3))), // x = x + 3;
 				makeReturn(makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(5))), // return x + 5;
-				makeVariableDeclaration(makeIdentifier("x"), makeType(Type::U8)), // x : u8;
-			})) // }
+			})), // }
+
+			makeFunctionDefinition(makeIdentifier("test"), makeType(Type::U8), makeCompoundNode({}), // u8 test(x : u8)
+			makeCompoundNode({ // {
+				makeBinaryOperator(BinaryOperator::ASSIGNMENT, makeIdentifier("x"), makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(3))), // x = x + 3;
+				makeReturn(makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(5))), // return x + 5;
+			})), // }
 		});
 
 	prettyPrint(ast);
@@ -42,11 +48,11 @@ void Compiler::writeLine(const std::string& line)
 	std::cout << line << std::endl;
 }
 
-Compiler::ASTNode* Compiler::makeCompoundStatement(const std::vector<ASTNode*>& body) const
+Compiler::ASTNode* Compiler::makeCompoundNode(const std::vector<ASTNode*>& body) const
 {
 	ASTNode* astNode = new ASTNode;
-	astNode->astNodeType = ASTNodeType::COMPOUND_STATEMENT;
-	new (&astNode->asCompoundStatement.body) std::vector<ASTNode*>(body);
+	astNode->astNodeType = ASTNodeType::COMPOUND_NODE;
+	new (&astNode->asCompoundNode.body) std::vector<ASTNode*>(body);
 	return astNode;
 }
 
@@ -54,7 +60,7 @@ Compiler::ASTNode* Compiler::makeReturn(ASTNode* expression) const
 {
 	ASTNode* astNode = new ASTNode;
 	astNode->astNodeType = ASTNodeType::RETURN;
-	astNode->asReturn.expression = expression;
+	astNode->asReturn.condition = expression;
 	return astNode;
 }
 
@@ -121,6 +127,45 @@ Compiler::ASTNode* Compiler::makeType(Type type) const
 	return astNode;
 }
 
+Compiler::ASTNode* Compiler::makeIfThenElse(ASTNode* condition, ASTNode* trueBody, ASTNode* falseBody)
+{
+	ASTNode* astNode = new ASTNode;
+	astNode->astNodeType = ASTNodeType::IF_THEN_ELSE;
+	astNode->asIfThenElse.condition = condition;
+	astNode->asIfThenElse.trueBody = trueBody;
+	astNode->asIfThenElse.falseBody = falseBody;
+	return astNode;
+}
+
+Compiler::ASTNode* Compiler::makeWhile(ASTNode* condition, ASTNode* body)
+{
+	ASTNode* astNode = new ASTNode;
+	astNode->astNodeType = ASTNodeType::WHILE;
+	astNode->asWhile.condition = condition;
+	astNode->asWhile.body = body;
+	return astNode;
+}
+
+Compiler::ASTNode* Compiler::makeDoWhile(ASTNode* condition, ASTNode* body)
+{
+	ASTNode* astNode = new ASTNode;
+	astNode->astNodeType = ASTNodeType::DO_WHILE;
+	astNode->asDoWhile.condition = condition;
+	astNode->asDoWhile.body = body;
+	return astNode;
+}
+
+Compiler::ASTNode* Compiler::makeFor(ASTNode* initialize, ASTNode* condition, ASTNode* increment, ASTNode* body)
+{
+	ASTNode* astNode = new ASTNode;
+	astNode->astNodeType = ASTNodeType::FOR;
+	astNode->asFor.initialize = initialize;
+	astNode->asFor.condition = condition;
+	astNode->asFor.increment = increment;
+	astNode->asFor.body = body;
+	return astNode;
+}
+
 void Compiler::prettyPrint(const ASTNode* astNode, unsigned int level) const
 {
 	for (unsigned int i = 0; i < level; i++)
@@ -130,16 +175,16 @@ void Compiler::prettyPrint(const ASTNode* astNode, unsigned int level) const
 
 	switch (astNode->astNodeType)
 	{
-	case ASTNodeType::COMPOUND_STATEMENT:
-		std::cout << "COMPOUND_STATEMENT:" << std::endl;
-		for (ASTNode* statement : astNode->asCompoundStatement.body)
+	case ASTNodeType::COMPOUND_NODE:
+		std::cout << "COMPOUND_NODE:" << std::endl;
+		for (ASTNode* node : astNode->asCompoundNode.body)
 		{
-			prettyPrint(statement, level + 1);
+			prettyPrint(node, level + 1);
 		}
 		break;
 	case ASTNodeType::RETURN:
 		std::cout << "RETURN:" << std::endl;
-		prettyPrint(astNode->asReturn.expression, level + 1);
+		prettyPrint(astNode->asReturn.condition, level + 1);
 		break;
 	case ASTNodeType::LITERAL:
 		std::cout << "LITERAL(" << astNode->asLiteral.value << ");" << std::endl;
@@ -207,6 +252,29 @@ void Compiler::prettyPrint(const ASTNode* astNode, unsigned int level) const
 		}
 		std::cout << ");" << std::endl;
 		break;
+	case ASTNodeType::IF_THEN_ELSE:
+		std::cout << "IF_THEN_ELSE:" << std::endl;
+		prettyPrint(astNode->asIfThenElse.condition, level + 1);
+		prettyPrint(astNode->asIfThenElse.trueBody, level + 1);
+		prettyPrint(astNode->asIfThenElse.falseBody, level + 1);
+		break;
+	case ASTNodeType::WHILE:
+		std::cout << "WHILE:" << std::endl;
+		prettyPrint(astNode->asWhile.condition, level + 1);
+		prettyPrint(astNode->asWhile.body, level + 1);
+		break;
+	case ASTNodeType::DO_WHILE:
+		std::cout << "DO_WHILE:" << std::endl;
+		prettyPrint(astNode->asDoWhile.condition, level + 1);
+		prettyPrint(astNode->asDoWhile.body, level + 1);
+		break;
+	case ASTNodeType::FOR:
+		std::cout << "FOR:" << std::endl;
+		prettyPrint(astNode->asFor.initialize, level + 1);
+		prettyPrint(astNode->asFor.condition, level + 1);
+		prettyPrint(astNode->asFor.increment, level + 1);
+		prettyPrint(astNode->asFor.body, level + 1);
+		break;
 	default:
 		throw std::exception("Illegal ASTNodeType");
 		break;
@@ -215,21 +283,26 @@ void Compiler::prettyPrint(const ASTNode* astNode, unsigned int level) const
 
 void Compiler::semanticAnalysis(const ASTNode* astNode)
 {
+	// heck
+}
 
+void Compiler::optimize(const ASTNode* astNode)
+{
+	// heck^2
 }
 
 void Compiler::codeGeneration(const ASTNode* astNode)
 {
 	switch (astNode->astNodeType)
 	{
-	case ASTNodeType::COMPOUND_STATEMENT:
-		for (ASTNode* statement : astNode->asCompoundStatement.body)
+	case ASTNodeType::COMPOUND_NODE:
+		for (ASTNode* node : astNode->asCompoundNode.body)
 		{
-			codeGeneration(statement);
+			codeGeneration(node);
 		}
 		break;
 	case ASTNodeType::RETURN:
-		codeGeneration(astNode->asReturn.expression);
+		codeGeneration(astNode->asReturn.condition);
 		writeLine("\tadd a0 t0 zero");
 		writeLine("\tli v0 0");
 		writeLine("\tsys");

@@ -1,60 +1,64 @@
 #include "binaryBuilder.hpp"
 
-BinaryBuilder::BinaryBuilder(const std::string& programPath)
+namespace kasm
 {
-	programFile.open(programPath, std::ios::binary);
-}
-
-BinaryBuilder::~BinaryBuilder()
-{
-}
-
-void BinaryBuilder::align(unsigned int alignment)
-{
-	unsigned int r = programFile.tellp() % alignment;
-	if (r)
+	BinaryBuilder::BinaryBuilder(const std::string& programPath)
 	{
-		pad(alignment - r);
+		programFile.open(programPath, std::ios::binary);
 	}
-}
 
-void BinaryBuilder::writeWord(std::uint32_t word)
-{
-	programFile.write(reinterpret_cast<char*>(&word), sizeof(word));
-}
-
-void BinaryBuilder::writeByte(std::uint8_t byte)
-{
-	programFile.write(reinterpret_cast<char*>(&byte), sizeof(byte));
-}
-
-void BinaryBuilder::writeData(const std::uint8_t* pData, unsigned int size)
-{
-	programFile.write(reinterpret_cast<const char*>(pData), size);
-}
-
-void BinaryBuilder::pad(unsigned int size)
-{
-	if (size > 0)
+	void BinaryBuilder::open(const std::string& programPath)
 	{
-		programFile.seekp(size - 1, std::ios::cur);
-		programFile.write("", 1);
+		programFile.open(programPath, std::ios::binary);
 	}
-}
 
-long BinaryBuilder::getLocation()
-{
-	return static_cast<long>(programFile.tellp());
-}
-
-void BinaryBuilder::setLocation(long location)
-{
-	if (location == END)
+	void BinaryBuilder::align(unsigned int alignment)
 	{
-		programFile.seekp(0, std::ios::end);
+		unsigned int r = programFile.tellp() % alignment;
+		if (r)
+		{
+			pad(alignment - r);
+		}
 	}
-	else
+
+	void BinaryBuilder::writeWord(std::uint32_t word)
 	{
-		programFile.seekp(location, std::ios::beg);
+		programFile.write(reinterpret_cast<char*>(&word), sizeof(word));
+	}
+
+	void BinaryBuilder::writeByte(std::uint8_t byte)
+	{
+		programFile.write(reinterpret_cast<char*>(&byte), sizeof(byte));
+	}
+
+	void BinaryBuilder::writeData(const std::uint8_t* pData, unsigned int size)
+	{
+		programFile.write(reinterpret_cast<const char*>(pData), size);
+	}
+
+	void BinaryBuilder::pad(unsigned int size)
+	{
+		if (size > 0)
+		{
+			programFile.seekp(size - 1, std::ios::cur);
+			programFile.write("", 1);
+		}
+	}
+
+	long BinaryBuilder::getLocation()
+	{
+		return static_cast<long>(programFile.tellp());
+	}
+
+	void BinaryBuilder::setLocation(long location)
+	{
+		if (location == END)
+		{
+			programFile.seekp(0, std::ios::end);
+		}
+		else
+		{
+			programFile.seekp(location, std::ios::beg);
+		}
 	}
 }

@@ -1,4 +1,6 @@
 entry:
+x:
+	space 1
 	li t0 2
 	sb t0 x
 	lb t0 x
@@ -13,5 +15,16 @@ entry:
 	add a0 t0 zero
 	li v0 0
 	sys
-x:
-	space 1
+test:
+	lb t0 x
+	add t1 t0 zero
+	li t0 3
+	add t0 t0 t1
+	sb t0 x
+	lb t0 x
+	add t1 t0 zero
+	li t0 5
+	add t0 t0 t1
+	add a0 t0 zero
+	li v0 0
+	sys

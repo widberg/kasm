@@ -11,275 +11,256 @@
 
 #include "common.hpp"
 
-VirtualMachine::VirtualMachine()
+namespace kasm
 {
-}
-
-VirtualMachine::~VirtualMachine()
-{
-}
-
-void VirtualMachine::advancePc()
-{
-    pc += INSTRUCTION_SIZE;
-}
-
-int VirtualMachine::execute()
-{
-    std::fill(std::begin(registers), std::end(registers), 0);
-    pc = 0;
-
-    std::uint8_t* stack = new std::uint8_t[144];
-    registers[SP] = registers[FP] = reinterpret_cast<std::uint32_t>(stack + 144 - 1);
-
-    while (pc < program.size())
+    void VirtualMachine::advancePc()
     {
-        std::uint32_t instruction = *reinterpret_cast<std::uint32_t*>(program.data() + pc);
+        pc += INSTRUCTION_SIZE;
+    }
 
-        InstructionData d = { instruction };
+    int VirtualMachine::execute()
+    {
+        std::fill(std::begin(registers), std::end(registers), 0);
+        pc = 0;
+        shouldExit = false;
+        exitCode = 0;
 
-        std::uint32_t instructionFormat = INSTRUCTION_FORMATS.at(d.opcode);
+        std::uint8_t* stack = new std::uint8_t[144];
+        registers[SP] = registers[FP] = reinterpret_cast<std::uint32_t>(stack + 144 - 1);
 
-        std::uint32_t address;
-        switch (instructionFormat & AnyAddress)
+        while (pc < program.size() && !shouldExit)
         {
-        case DirectAddressAbsolute:
-            address = d.directAddressAbsolute;
+            std::uint32_t instruction = *reinterpret_cast<std::uint32_t*>(program.data() + pc);
+
+            InstructionData d = { instruction };
+
+            switch (d.opcode)
+            {
+            case NOP:
+                advancePc();
+                break;
+            case SYSTEM_CALL:
+                systemCall();
+                advancePc();
+                break;
+            case JUMP:
+                pc = address;
+                break;
+            case JUMP_REGISTER:
+                pc = getRegister(d.register0);
+                break;
+            case JUMP_AND_LINK:
+                registers[RA] = pc + INSTRUCTION_SIZE;
+                pc = address;
+                break;
+            case JUMP_AND_LINK_REGISTER:
+                registers[RA] = pc + INSTRUCTION_SIZE;
+                pc = getRegister(d.register0);
+                break;
+            case BRANCH_UNCONDITIONAL:
+                pc = address;
+                break;
+            case BRANCH_EQUALS:
+                if (getRegister(d.register0) == getRegister(d.register1))
+                {
+                    pc = address;
+                }
+                else
+                {
+                    advancePc();
+                }
+                break;
+            case BRANCH_NOT_EQUALS:
+                if (getRegister(d.register0) != getRegister(d.register1))
+                {
+                    pc = address;
+                }
+                else
+                {
+                    advancePc();
+                }
+                break;
+            case BRANCH_LESS_THAN:
+                if (getRegister(d.register0) < getRegister(d.register1))
+                {
+                    pc = address;
+                }
+                else
+                {
+                    advancePc();
+                }
+                break;
+            case BRANCH_GREATER_THAN:
+                if (getRegister(d.register0) > getRegister(d.register1))
+                {
+                    pc = address;
+                }
+                else
+                {
+                    advancePc();
+                }
+                break;
+            case BRANCH_LESS_THAN_OR_EQUALS:
+                if (getRegister(d.register0) <= getRegister(d.register1))
+                {
+                    pc = address;
+                }
+                else
+                {
+                    advancePc();
+                }
+                break;
+            case BRANCH_GREATER_THAN_OR_EQUALS:
+                if (getRegister(d.register0) >= getRegister(d.register1))
+                {
+                    pc = address;
+                }
+                else
+                {
+                    advancePc();
+                }
+                break;
+            case LOAD_IMMEDIATE:
+                setRegister(d.register0, d.immediate);
+                advancePc();
+                break;
+            case LOAD_ADDRESS:
+                setRegister(d.register0, address);
+                advancePc();
+                break;
+            case LOAD_WORD:
+                setRegister(d.register0, *reinterpret_cast<std::uint32_t*>(program.data() + address));
+                advancePc();
+                break;
+            case SAVE_WORD:
+                *reinterpret_cast<std::uint32_t*>(program.data() + address) = getRegister(d.register0);
+                advancePc();
+                break;
+            case LOAD_BYTE:
+                setRegister(d.register0, program[address]);
+                advancePc();
+                break;
+            case SAVE_BYTE:
+                program[address] = getRegister(d.register0);
+                advancePc();
+                break;
+            case ADD:
+                setRegister(d.register0, getRegister(d.register1) + getRegister(d.register2));
+                advancePc();
+                break;
+            case SUB:
+                setRegister(d.register0, getRegister(d.register1) - getRegister(d.register2));
+                advancePc();
+                break;
+            case MUL:
+                setRegister(d.register0, getRegister(d.register1) * getRegister(d.register2));
+                advancePc();
+                break;
+            case DIV:
+                setRegister(d.register0, getRegister(d.register1) / getRegister(d.register2));
+                advancePc();
+                break;
+            case MOD:
+                setRegister(d.register0, getRegister(d.register1) % getRegister(d.register2));
+                advancePc();
+                break;
+            default:
+                throw std::exception(std::string("Illegal opcode: " + d.opcode).c_str());
+                break;
+            }
+        }
+
+        delete[] stack;
+
+        return exitCode;
+    }
+
+    void VirtualMachine::loadProgram(const std::string& programPath)
+    {
+        std::ifstream programFile(programPath, std::ios::ate | std::ios::binary);
+        program.resize(programFile.tellg());
+        programFile.seekg(0, std::ios::beg);
+        programFile.read(reinterpret_cast<char*>(program.data()), program.size());
+
+        std::cout << "Loaded program: " << programPath << std::endl;
+        std::cout << "--- BEGIN PROGRAM MEMORY ---" << std::endl;
+        for (int i = 0; i < program.size() / INSTRUCTION_SIZE; i++)
+        {
+            std::cout << "0x" << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<std::uint32_t*>(program.data() + i * INSTRUCTION_SIZE);
+            if ((i + 1) % 8 && i < program.size() / INSTRUCTION_SIZE - 1)
+            {
+                std::cout << " ";
+            }
+            else
+            {
+                std::cout << std::endl;
+            }
+        }
+        std::cout << "---  END PROGRAM MEMORY  ---" << std::endl;
+    }
+
+    void VirtualMachine::systemCall()
+    {
+        switch (registers[V0])
+        {
+        case EXIT:
+            shouldExit = true;
+            exitCode = registers[A0];
             break;
-        case DirectAddressOffset:
-            address = d.directAddressOffset + pc;
+        case READ_INT:
+            std::cin >> registers[A0];
             break;
-        case IndirectAddressAbsolute:
-            address = getRegister(d.register1) + d.directAddressOffset;
+        case WRITE_INT:
+            std::cout << registers[A0];
+            break;
+        case READ_CHAR:
+            std::cin >> reinterpret_cast<char&>(registers[A0]);
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            break;
+        case WRITE_CHAR:
+            std::cout << static_cast<char>(registers[A0]);
+            break;
+        case READ_STRING:
+            if (registers[A1] < 1)
+            {
+                break;
+            }
+            else
+            {
+                char c;
+                unsigned int i = 0;
+                while ((c = std::cin.get()) != '\n' && i < registers[A1] - 1)
+                {
+                    *reinterpret_cast<char*>(program.data() + registers[A0] + i) = c;
+                    i++;
+                }
+                *reinterpret_cast<char*>(program.data() + registers[A0] + i) = '\0';
+            }
+            break;
+        case WRITE_STRING:
+            std::cout << reinterpret_cast<char*>(program.data() + registers[A0]);
+            break;
+        case ALLOCATE:
+            registers[V0] = reinterpret_cast<std::uint32_t>(new std::uint8_t[registers[A0]]);
+            break;
+        case DEALLOCATE:
+            delete[] reinterpret_cast<std::uint8_t*>(registers[A0]);
             break;
         default:
-            break;
-        }
-
-        switch (d.opcode)
-        {
-        case NOP:
-            advancePc();
-            break;
-        case SYSTEM_CALL:
-            systemCall();
-            advancePc();
-            break;
-        case JUMP:
-            pc = address;
-            break;
-        case JUMP_REGISTER:
-            pc = getRegister(d.register0);
-            break;
-        case JUMP_AND_LINK:
-            registers[RA] = pc + INSTRUCTION_SIZE;
-            pc = address;
-            break;
-        case JUMP_AND_LINK_REGISTER:
-            registers[RA] = pc + INSTRUCTION_SIZE;
-            pc = getRegister(d.register0);
-            break;
-        case BRANCH_UNCONDITIONAL:
-            pc = address;
-            break;
-        case BRANCH_EQUALS:
-            if (getRegister(d.register0) == getRegister(d.register1))
-            {
-                pc = address;
-            }
-            else
-            {
-                advancePc();
-            }
-            break;
-        case BRANCH_NOT_EQUALS:
-            if (getRegister(d.register0) != getRegister(d.register1))
-            {
-                pc = address;
-            }
-            else
-            {
-                advancePc();
-            }
-            break;
-        case BRANCH_LESS_THAN:
-            if (getRegister(d.register0) < getRegister(d.register1))
-            {
-                pc = address;
-            }
-            else
-            {
-                advancePc();
-            }
-            break;
-        case BRANCH_GREATER_THAN:
-            if (getRegister(d.register0) > getRegister(d.register1))
-            {
-                pc = address;
-            }
-            else
-            {
-                advancePc();
-            }
-            break;
-        case BRANCH_LESS_THAN_OR_EQUALS:
-            if (getRegister(d.register0) <= getRegister(d.register1))
-            {
-                pc = address;
-            }
-            else
-            {
-                advancePc();
-            }
-            break;
-        case BRANCH_GREATER_THAN_OR_EQUALS:
-            if (getRegister(d.register0) >= getRegister(d.register1))
-            {
-                pc = address;
-            }
-            else
-            {
-                advancePc();
-            }
-            break;
-        case LOAD_IMMEDIATE:
-            setRegister(d.register0, d.immediate);
-            advancePc();
-            break;
-        case LOAD_ADDRESS:
-            setRegister(d.register0, address);
-            advancePc();
-            break;
-        case LOAD_WORD:
-            setRegister(d.register0, *reinterpret_cast<std::uint32_t*>(program.data() + address));
-            advancePc();
-            break;
-        case SAVE_WORD:
-            *reinterpret_cast<std::uint32_t*>(program.data() + address) = getRegister(d.register0);
-            advancePc();
-            break;
-        case LOAD_BYTE:
-            setRegister(d.register0, program[address]);
-            advancePc();
-            break;
-        case SAVE_BYTE:
-            program[address] = getRegister(d.register0);
-            advancePc();
-            break;
-        case ADD:
-            setRegister(d.register0, getRegister(d.register1) + getRegister(d.register2));
-            advancePc();
-            break;
-        case SUB:
-            setRegister(d.register0, getRegister(d.register1) - getRegister(d.register2));
-            advancePc();
-            break;
-        case MUL:
-            setRegister(d.register0, getRegister(d.register1) * getRegister(d.register2));
-            advancePc();
-            break;
-        case DIV:
-            setRegister(d.register0, getRegister(d.register1) / getRegister(d.register2));
-            advancePc();
-            break;
-        case MOD:
-            setRegister(d.register0, getRegister(d.register1) % getRegister(d.register2));
-            advancePc();
-            break;
-        default:
-            throw std::exception(std::string("Illegal opcode: " + d.opcode).c_str());
+            throw std::exception(std::string("Illegal system call: " + registers[V0]).c_str());
             break;
         }
     }
 
-    delete[] stack;
-
-    return 0;
-}
-
-void VirtualMachine::loadProgram(const std::string& programPath)
-{
-    std::ifstream programFile(programPath, std::ios::ate | std::ios::binary);
-    program.resize(programFile.tellg());
-    programFile.seekg(0, std::ios::beg);
-    programFile.read(reinterpret_cast<char*>(program.data()), program.size());
-
-    std::cout << "Loaded program: " << programPath << std::endl;
-    std::cout << "--- BEGIN PROGRAM MEMORY ---" << std::endl;
-    for (int i = 0; i < program.size() / INSTRUCTION_SIZE; i++)
+    void VirtualMachine::setRegister(std::uint32_t reg, std::uint32_t value)
     {
-        std::cout << "0x" << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<std::uint32_t*>(program.data() + i * INSTRUCTION_SIZE);
-        if ((i + 1) % 8 && i < program.size() / INSTRUCTION_SIZE - 1)
-        {
-            std::cout << " ";
-        }
-        else
-        {
-            std::cout << std::endl;
-        }
+        if (reg == ZERO) return;
+        registers[reg] = value;
     }
-    std::cout << "---  END PROGRAM MEMORY  ---" << std::endl;
-}
 
-void VirtualMachine::systemCall()
-{
-    switch (registers[V0])
+    std::uint32_t VirtualMachine::getRegister(std::uint32_t reg)
     {
-    case EXIT:
-        exit(registers[A0]);
-    case READ_INT:
-        std::cin >> registers[A0];
-        break;
-    case WRITE_INT:
-        std::cout << registers[A0];
-        break;
-    case READ_CHAR:
-        std::cin >> reinterpret_cast<char&>(registers[A0]);
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        break;
-    case WRITE_CHAR:
-        std::cout << static_cast<char>(registers[A0]);
-        break;
-    case READ_STRING:
-        if (registers[A1] < 1)
-        {
-            break;
-        }
-        else
-        {
-            char c;
-            unsigned int i = 0;
-            while ((c = std::cin.get()) != '\n' && i < registers[A1] - 1)
-            {
-                *reinterpret_cast<char*>(program.data() + registers[A0] + i) = c;
-                i++;
-            }
-            *reinterpret_cast<char*>(program.data() + registers[A0] + i) = '\0';
-        }
-        break;
-    case WRITE_STRING:
-        std::cout << reinterpret_cast<char*>(program.data() + registers[A0]);
-        break;
-    case ALLOCATE:
-        registers[V0] = reinterpret_cast<std::uint32_t>(new std::uint8_t[registers[A0]]);
-        break;
-    case DEALLOCATE:
-        delete[] reinterpret_cast<std::uint8_t*>(registers[A0]);
-        break;
-    default:
-        throw std::exception(std::string("Illegal system call: " + registers[V0]).c_str());
-        break;
+        if (reg == ZERO) return 0;
+        return registers[reg];
     }
-}
-
-void VirtualMachine::setRegister(std::uint32_t reg, std::uint32_t value)
-{
-    if (reg == ZERO) return;
-    registers[reg] = value;
-}
-
-std::uint32_t VirtualMachine::getRegister(std::uint32_t reg)
-{
-    if (reg == ZERO) return 0;
-    return registers[reg];
 }

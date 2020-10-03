@@ -3,23 +3,28 @@
 #include <fstream>
 #include <string>
 
-class BinaryBuilder
+namespace kasm
 {
-public:
-	BinaryBuilder(const std::string& programPath);
-	~BinaryBuilder();
+	class BinaryBuilder
+	{
+	public:
+		BinaryBuilder() {};
+		BinaryBuilder(const std::string& programPath);
+		~BinaryBuilder() {};
 
-	void align(unsigned int alignment);
-	void writeWord(std::uint32_t word);
-	void writeByte(std::uint8_t byte);
-	void writeData(const std::uint8_t* pData, unsigned int size);
-	void pad(unsigned int size);
-	long getLocation();
-	void setLocation(long location);
+		void open(const std::string& programPath);
+		void align(unsigned int alignment);
+		void writeWord(std::uint32_t word);
+		void writeByte(std::uint8_t byte);
+		void writeData(const std::uint8_t* pData, unsigned int size);
+		void pad(unsigned int size);
+		long getLocation();
+		void setLocation(long location);
 
-	static const int BEG = 0;
-	static const int END = -1;
+		static const int BEG = 0;
+		static const int END = -1;
 
-private:
-	std::ofstream programFile;
-};
+	private:
+		std::ofstream programFile;
+	};
+}
