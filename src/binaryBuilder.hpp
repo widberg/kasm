@@ -17,6 +17,7 @@ namespace kasm
 		void writeWord(std::uint32_t word);
 		void writeByte(std::uint8_t byte);
 		void writeData(const std::uint8_t* pData, unsigned int size);
+		void writeString(const char* string, unsigned int size);
 		void pad(unsigned int size);
 		long getLocation();
 		void setLocation(long location);

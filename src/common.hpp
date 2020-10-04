@@ -120,14 +120,17 @@ namespace kasm
         GP,
         SP,
         FP,
-        RA
+        RA,
     };
 
     enum class AddressType : std::uint8_t
     {
+        Invalid,
         DirectAddressAbsolute,
         DirectAddressOffset,
         IndirectAddressAbsolute,
+        DirectAddressAbsoluteWord,
+        DirectAddressAbsoluteByte,
     };
 
     struct Address
@@ -135,6 +138,7 @@ namespace kasm
         AddressType type;
         std::string label;
         std::uint32_t offset;
+        std::uint8_t reg;
         InstructionData instructionData;
     };
 }

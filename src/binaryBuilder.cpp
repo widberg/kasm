@@ -36,6 +36,11 @@ namespace kasm
 		programFile.write(reinterpret_cast<const char*>(pData), size);
 	}
 
+	void BinaryBuilder::writeString(const char* string, unsigned int size)
+	{
+		programFile.write(string, size);
+	}
+
 	void BinaryBuilder::pad(unsigned int size)
 	{
 		if (size > 0)

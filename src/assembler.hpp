@@ -8,6 +8,7 @@
 #include "binaryBuilder.hpp"
 #include "common.hpp"
 
+// forawrd declare parser class so we can friend it
 namespace yy { class parser; };
 
 namespace kasm
@@ -20,7 +21,7 @@ namespace kasm
 
 		void assemble(const std::string& asmPath, const std::string& programPath);
 	private:
-		std::uint32_t resolveAddress(std::uint32_t instructionLocation, const Address& address);
+		std::uint32_t resolveAddress(std::uint32_t instructionLocation, Address address);
 
 		static const std::uint32_t MUST_RESOLVE = std::numeric_limits<std::uint32_t>::max();
 

@@ -28,6 +28,13 @@ cmake --build .
 
 ## KASM Environment
 
+### Tools
+
+* kasm
+* kvm
+* kdbg
+* klang
+
 ### Instruction Encoding
 
 Instructions are (1 word | 4 bytes | 32 bits) long.

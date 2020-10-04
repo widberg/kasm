@@ -1,4 +1,10 @@
-data:
+	.text
+main:
 	add $v0, $v0, $v0
-.word 0 1
-.asciiz "fuck"
+	add $v0, $v0, $v0
+
+	.data
+data:
+	.word 0, 1
+	.asciiz "darn"
+	.ascii "heck"
