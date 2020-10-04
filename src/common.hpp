@@ -129,4 +129,12 @@ namespace kasm
         DirectAddressOffset,
         IndirectAddressAbsolute,
     };
+
+    struct Address
+    {
+        AddressType type;
+        std::string label;
+        std::uint32_t offset;
+        InstructionData instructionData;
+    };
 }

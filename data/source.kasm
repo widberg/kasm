@@ -1,2 +1,4 @@
 data:
-	.align LITERAL
+	add $v0, $v0, $v0
+.word 0 1
+.asciiz "fuck"

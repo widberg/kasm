@@ -52,6 +52,7 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 %type<std::string> IDENTIFIER STRING
 %type<std::uint32_t> LITERAL REGISTER
 %type<std::vector<std::uint32_t>> literal_list
+%type<kasm::Address> direct_address indirect_address
 
 %start statement_list
 
@@ -67,7 +68,6 @@ statement_list
 label_declaration
     : IDENTIFIER ':'
     {
-		std::cout << $1 << std::endl;
         ctx.assembler->labelLocations[$1] = ctx.assembler->binary.getLocation();
     }
     ;
@@ -98,7 +98,6 @@ statement
     }
     | ALIGN LITERAL
     {
-		std::cout << "align " << std::to_string($2) << std::endl;
         unsigned int alignment = 1;
         for (int i = 0; i < $2; i++)
         {
@@ -110,17 +109,361 @@ statement
     {
         ctx.assembler->binary.pad($2);
     }
-    | ADD REGISTER ',' REGISTER ',' REGISTER
+    | ADD REGISTER separator REGISTER separator REGISTER
 	{
-		
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::ADD;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.register2 = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
 	}
-    | BEQ REGISTER ',' REGISTER ',' direct_address
+	| ADDI REGISTER separator REGISTER separator LITERAL
 	{
-
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::ADDI;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.immediate = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
 	}
-    | LB REGISTER ',' indirect_address
+	| ADDIU REGISTER separator REGISTER separator LITERAL
 	{
-
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::ADDIU;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.immediate = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| AND REGISTER separator REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::AND;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.register2 = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| ANDI REGISTER separator REGISTER separator LITERAL
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::ANDI;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.immediate = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+    | BEQ REGISTER separator REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::BEQ;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $6);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| BGEZ REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::BGEZ;
+		instructionData.register0 = $2;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| BGEZAL REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::BGEZAL;
+		instructionData.register0 = $2;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| BGTZ REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::BGTZ;
+		instructionData.register0 = $2;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| BLEZ REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::BLEZ;
+		instructionData.register0 = $2;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| BLTZ REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::BLTZ;
+		instructionData.register0 = $2;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| BLTZAL REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::BLTZAL;
+		instructionData.register0 = $2;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| BNE REGISTER separator REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::BNE;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $6);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| DIV REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::DIV;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| DIVU REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::DIVU;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| J direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::J;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $2);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| JAL direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::JAL;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $2);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| JR REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::JR;
+		instructionData.register0 = $2;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+    | LB REGISTER separator indirect_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::LB;
+		instructionData.register0 = $2;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| LUI REGISTER separator LITERAL
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::LUI;
+		instructionData.register0 = $2;
+		instructionData.immediate = $4;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| LW REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::LW;
+		instructionData.register0 = $2;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| MFHI REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::MFHI;
+		instructionData.register0 = $2;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| MFLO REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::MFLO;
+		instructionData.register0 = $2;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| MULT REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::MULT;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| MULTU REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::MULTU;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| NOP
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::NOP;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| OR REGISTER separator REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::OR;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.register2 = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| ORI REGISTER separator REGISTER separator LITERAL
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::ORI;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.immediate = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SB REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SB;
+		instructionData.register0 = $2;
+		instructionData.directAddressOffset = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SLL REGISTER separator REGISTER separator LITERAL
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SLL;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.immediate = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SLLV REGISTER separator REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SLLV;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.register2 = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SLT REGISTER separator REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SLT;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.register2 = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SLTI REGISTER separator REGISTER separator LITERAL
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SLTI;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.immediate = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SLTIU REGISTER separator REGISTER separator LITERAL
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SLTIU;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.immediate = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SRA REGISTER separator REGISTER separator LITERAL
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SRA;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.immediate = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SRL REGISTER separator REGISTER separator LITERAL
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SRL;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.immediate = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SRLV REGISTER separator REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SRLV;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.register2 = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SUB REGISTER separator REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SUB;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.register2 = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SUBU REGISTER separator REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SUBU;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.register2 = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SW REGISTER separator direct_address
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SW;
+		instructionData.register0 = $2;
+		instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4);
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| SYS
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::SYS;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| XOR REGISTER separator REGISTER separator REGISTER
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::XOR;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.register2 = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
+	}
+	| XORI REGISTER separator REGISTER separator LITERAL
+	{
+		kasm::InstructionData instructionData;
+		instructionData.opcode = kasm::Opcode::XORI;
+		instructionData.register0 = $2;
+		instructionData.register1 = $4;
+		instructionData.immediate = $6;
+        ctx.assembler->binary.writeWord(instructionData.instruction);
 	}
     ;
 
@@ -129,7 +472,7 @@ literal_list
     {
         $$ = std::vector<std::uint32_t>($1);
     }
-    | literal_list ',' LITERAL
+    | literal_list separator LITERAL
     {
         $1.push_back($3);
 		$$ = $1;
@@ -138,17 +481,62 @@ literal_list
 
 indirect_address
     : direct_address
+	{
+		$1.type = kasm::AddressType::IndirectAddressAbsolute;
+		$$ = $1;
+	}
     | '(' REGISTER ')'
+	{
+		kasm::Address addr = kasm::Address{kasm::AddressType::IndirectAddressAbsolute};
+		addr.instructionData.register1 = $2;
+		$$ = addr;
+	}
     | LITERAL '(' REGISTER ')'
+	{
+		kasm::Address addr = kasm::Address{kasm::AddressType::IndirectAddressAbsolute};
+		addr.offset = $1;
+		addr.instructionData.register1 = $3;
+		$$ = addr;
+	}
     | IDENTIFIER '(' REGISTER ')'
+	{
+		kasm::Address addr = kasm::Address{kasm::AddressType::IndirectAddressAbsolute};
+		addr.label = $1;
+		addr.instructionData.register1 = $3;
+		$$ = addr;
+	}
     | LITERAL '+' LITERAL '(' REGISTER ')'
+	{
+		kasm::Address addr = kasm::Address{kasm::AddressType::IndirectAddressAbsolute};
+		addr.offset = $1 + $3;
+		addr.instructionData.register1 = $5;
+		$$ = addr;
+	}
     | IDENTIFIER '+' LITERAL '(' REGISTER ')'
+	{
+		kasm::Address addr = kasm::Address{kasm::AddressType::IndirectAddressAbsolute};
+		addr.label = $1;
+		addr.offset = $3;
+		addr.instructionData.register1 = $5;
+		$$ = addr;
+	}
     ;
 
 direct_address
     : IDENTIFIER
+	{
+		$$ = kasm::Address{kasm::AddressType::DirectAddressAbsolute, $1};
+	}
     | IDENTIFIER '+' LITERAL
+	{
+		$$ = kasm::Address{kasm::AddressType::DirectAddressAbsolute, "", $3};
+	}
     ;
+
+separator
+	: ','
+	| %empty
+	;
 
 %%
 
@@ -177,71 +565,72 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
     const char* YYMARKER;
     const char* anchor = ctx.cursor;
 #define walk() { ctx.loc.columns(ctx.cursor - anchor); }
-#define advance() { anchor = ctx.cursor; ctx.loc.step(); }
+#define advance() { anchor = ctx.cursor; ctx.loc.step(); goto init; }
 #define token(name) { walk(); return parser::make_##name(ctx.loc); }
 #define tokenv(name, ...) { walk(); return parser::make_##name(__VA_ARGS__, ctx.loc); }
-
     %{ /* Begin re2c lexer */
     re2c:yyfill:enable = 0;
     re2c:define:YYCTYPE = "char";
     re2c:define:YYCURSOR = "ctx.cursor";
 
 	end = "\x00";
-
+	%}
+init:
+	%{
 	// Instructions
-	"add" | "ADD" { token(ADD); }
-	"addi" | "ADDI" { token(ADDI); }
-	"addiu" | "ADDIU" { token(ADDIU); }
-	"addu" | "ADDU" { token(ADDU); }
-	"and" | "AND" { token(AND); }
-	"andi" | "ANDI" { token(ANDI); }
-	"beq" | "BEQ" { token(BEQ); }
-	"bgez" | "BGEZ" { token(BGEZ); }
-	"bgezal" | "BGEZAL" { token(BGEZAL); }
-	"bgtz" | "BGTZ" { token(BGTZ); }
-	"blez" | "BLEZ" { token(BLEZ); }
-	"bltz" | "BLTZ" { token(BLTZ); }
-	"bltzal" | "BLTZAL" { token(BLTZAL); }
-	"bne" | "BNE" { token(BNE); }
-	"div" | "DIV" { token(DIV); }
-	"divu" | "DIVU" { token(DIVU); }
-	"j" | "J" { token(J); }
-	"jal" | "JAL" { token(JAL); }
-	"jr" | "JR" { token(JR); }
-	"lb" | "LB" { token(LB); }
-	"lui" | "LUI" { token(LUI); }
-	"lw" | "LW" { token(LW); }
-	"mfhi" | "MFHI" { token(MFHI); }
-	"mflo" | "MFLO" { token(MFLO); }
-	"mult" | "MULT" { token(MULT); }
-	"multu" | "MULTU" { token(MULTU); }
-	"nop" | "NOP" { token(NOP); }
-	"or" | "OR" { token(OR); }
-	"ori" | "ORI" { token(ORI); }
-	"sb" | "SB" { token(SB); }
-	"sll" | "SLL" { token(SLL); }
-	"sllv" | "SLLV" { token(SLLV); }
-	"slt" | "SLT" { token(SLT); }
-	"slti" | "SLTI" { token(SLTI); }
-	"sltiu" | "SLTIU" { token(SLTIU); }
-	"sltu" | "SLTU" { token(SLTU); }
-	"sra" | "SRA" { token(SRA); }
-	"srl" | "SRL" { token(SRL); }
-	"srlv" | "SRLV" { token(SRLV); }
-	"sub" | "SUB" { token(SUB); }
-	"subu" | "SUBU" { token(SUBU); }
-	"sw" | "SW" { token(SW); }
-	"sys" | "SYS" { token(SYS); }
-	"xor" | "XOR" { token(XOR); }
-	"xori" | "XORI" { token(XORI); }
+	"add"|"ADD" { token(ADD); }
+	"addi"|"ADDI" { token(ADDI); }
+	"addiu"|"ADDIU" { token(ADDIU); }
+	"addu"|"ADDU" { token(ADDU); }
+	"and"|"AND" { token(AND); }
+	"andi"|"ANDI" { token(ANDI); }
+	"beq"|"BEQ" { token(BEQ); }
+	"bgez"|"BGEZ" { token(BGEZ); }
+	"bgezal"|"BGEZAL" { token(BGEZAL); }
+	"bgtz"|"BGTZ" { token(BGTZ); }
+	"blez"|"BLEZ" { token(BLEZ); }
+	"bltz"|"BLTZ" { token(BLTZ); }
+	"bltzal"|"BLTZAL" { token(BLTZAL); }
+	"bne"|"BNE" { token(BNE); }
+	"div"|"DIV" { token(DIV); }
+	"divu"|"DIVU" { token(DIVU); }
+	"j"|"J" { token(J); }
+	"jal"|"JAL" { token(JAL); }
+	"jr"|"JR" { token(JR); }
+	"lb"|"LB" { token(LB); }
+	"lui"|"LUI" { token(LUI); }
+	"lw"|"LW" { token(LW); }
+	"mfhi"|"MFHI" { token(MFHI); }
+	"mflo"|"MFLO" { token(MFLO); }
+	"mult"|"MULT" { token(MULT); }
+	"multu"|"MULTU" { token(MULTU); }
+	"nop"|"NOP" { token(NOP); }
+	"or"|"OR" { token(OR); }
+	"ori"|"ORI" { token(ORI); }
+	"sb"|"SB" { token(SB); }
+	"sll"|"SLL" { token(SLL); }
+	"sllv"|"SLLV" { token(SLLV); }
+	"slt"|"SLT" { token(SLT); }
+	"slti"|"SLTI" { token(SLTI); }
+	"sltiu"|"SLTIU" { token(SLTIU); }
+	"sltu"|"SLTU" { token(SLTU); }
+	"sra"|"SRA" { token(SRA); }
+	"srl"|"SRL" { token(SRL); }
+	"srlv"|"SRLV" { token(SRLV); }
+	"sub"|"SUB" { token(SUB); }
+	"subu"|"SUBU" { token(SUBU); }
+	"sw"|"SW" { token(SW); }
+	"sys"|"SYS" { token(SYS); }
+	"xor"|"XOR" { token(XOR); }
+	"xori"|"XORI" { token(XORI); }
 
 	// Directives
-	".word" | ".WORD" { token(WORD); }
-	".byte" | ".BYTE" { token(BYTE); }
-	".ascii" | ".ASCII" { token(ASCII); }
-	".asciiz" | ".ASCIIZ" { token(ASCIIZ); }
-	".align" | ".ALIGN" { token(ALIGN); }
-	".space" | ".SPACE" { token(SPACE); }
+	".word"|".WORD" { token(WORD); }
+	".byte"|".BYTE" { token(BYTE); }
+	".ascii"|".ASCII" { token(ASCII); }
+	".asciiz"|".ASCIIZ" { token(ASCIIZ); }
+	".align"|".ALIGN" { token(ALIGN); }
+	".space"|".SPACE" { token(SPACE); }
 
 	// Identifier
 	[a-zA-Z_][a-zA-Z_0-9]* { tokenv(IDENTIFIER, std::string(anchor, ctx.cursor)); }
@@ -251,21 +640,21 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 	"$"([0-9]|[1-2][0-9]|"3"[0-1]) { tokenv(REGISTER, std::stoi(std::string(anchor + 1, ctx.cursor))); }
 
 	// Literals
-	"LITERAL" { tokenv(LITERAL, 0); }
-	//"0b"[01]+ { tokenv(LITERAL, 0); }
-	//"0x"[0-9a-fA-F]+ { tokenv(LITERAL, 0); }
-	//"'"(.|[\\].)"'"                  { tokenv(LITERAL, anchor[1]); }
+	[-+]?[0-9]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor))); }
+	"0b"[01]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor))); }
+	"0x"[0-9a-fA-F]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor))); }
+	"'"(.|[\\].)"'"                  { tokenv(LITERAL, anchor[1]); }
 
 	// String
-	"\"".*"\""               { tokenv(STRING, std::string(anchor + 1, ctx.cursor - 1)); }
+	"\""[^"]*"\""               { tokenv(STRING, std::string(anchor + 1, ctx.cursor - 1)); }
 
 	// Whitespace
 	"\r\n"|[\r\n]{ ctx.loc.lines(); advance(); }
-	[\t\v\b\f\s] { ctx.loc.columns(); advance(); }
+	[\t\v\b\f ] { ctx.loc.columns(); advance(); }
 	end { token(END_OF_FILE); }
 
 	// Comment
-	"#"[^ \r\n] * { walk(); advance(); }
+	"#"[^\r\n]* { walk(); advance(); }
 
 	// Single character operators
 	* { walk(); return parser::symbol_type(parser::token_type(ctx.cursor[-1] & 0xFF), ctx.loc); }
@@ -287,8 +676,9 @@ namespace kasm
         unresolvedAddressLocations.clear();
 
         std::ifstream asmFile(asmPath);
-        std::string sourceCode;
+		binary.open(programPath);
 
+        std::string sourceCode;
         asmFile.seekg(0, std::ios::end);
         sourceCode.reserve(asmFile.tellg());
         asmFile.seekg(0, std::ios::beg);
@@ -307,67 +697,52 @@ namespace kasm
 
         for (UnresolvedAddressLocation unresolvedAddressLocation : unresolvedAddressLocations)
         {
-            if (labelLocations.count(unresolvedAddressLocation.label))
-            {
-                binary.setLocation(unresolvedAddressLocation.location);
-                std::uint32_t instruction = unresolvedAddressLocation.instruction;
+			binary.setLocation(unresolvedAddressLocation.location);
+			std::uint32_t instruction = unresolvedAddressLocation.address.instructionData.instruction;
 
-                switch (unresolvedAddressLocation.type)
-                {
-                case AddressType::DirectAddressAbsolute:
-                    instruction |= labelLocations.at(unresolvedAddressLocation.label);
-                    break;
-                case AddressType::DirectAddressOffset:
-                    instruction |= labelLocations.at(unresolvedAddressLocation.label) - unresolvedAddressLocation.location;
-                    break;
-                case AddressType::IndirectAddressAbsolute:
-                    instruction |= (instruction & 0xFFFF) + labelLocations.at(unresolvedAddressLocation.label);
-                    break;
-                default:
-                    break;
-                }
+			instruction = resolveAddress(MUST_RESOLVE, unresolvedAddressLocation.address);
 
-                binary.writeWord(instruction);
-            }
-            else
-            {
-                throw std::exception(std::string("Unresolved Label: " + unresolvedAddressLocation.label).c_str());
-            }
+			binary.writeWord(instruction);
         }
 
         binary.setLocation(BinaryBuilder::END);
         binary.align(INSTRUCTION_SIZE);
     }
 
-    std::uint32_t Assembler::resolveAddress(std::uint32_t instructionLocation, const std::string& address, AddressType type, std::uint32_t instruction)
+    std::uint32_t Assembler::resolveAddress(std::uint32_t instructionLocation, const Address& address)
     {
-        switch (type)
+		if (address.label == "")
+		{
+			switch (address.type)
+			{
+			case AddressType::DirectAddressAbsolute:
+			case AddressType::IndirectAddressAbsolute:
+				return address.instructionData.instruction | address.offset;
+			case AddressType::DirectAddressOffset:
+				return address.instructionData.instruction | address.offset - instructionLocation;
+			default:
+				break;
+			}
+		}
+		else if (labelLocations.count(address.label))
         {
-        case AddressType::DirectAddressAbsolute:
-            if (labelLocations.count(address))
-            {
-                return instruction | labelLocations.at(address);
-            }
-            break;
-        case AddressType::DirectAddressOffset:
-            if (labelLocations.count(address))
-            {
-                return instruction | (labelLocations.at(address) - instructionLocation);
-            }
-            break;
-        case AddressType::IndirectAddressAbsolute:
-            if (labelLocations.count(address))
-            {
-                return instruction | labelLocations.at(address);
-            }
-            break;
-            //return instruction | resolveRegisterName(address, 1);
-            break;
-        default:
-            break;
-        }
+			switch (address.type)
+			{
+			case AddressType::DirectAddressAbsolute:
+			case AddressType::IndirectAddressAbsolute:
+				return address.instructionData.instruction | labelLocations.at(address.label) + address.offset;
+			case AddressType::DirectAddressOffset:
+				return address.instructionData.instruction | labelLocations.at(address.label) + address.offset - instructionLocation;
+			default:
+				break;
+			}
+		}
+		else if (instructionLocation == MUST_RESOLVE)
+		{
+                throw std::exception(std::string("Unresolved Label: " + address.label).c_str());
+		}
 
-        unresolvedAddressLocations.push_back({ instructionLocation, address, type, instruction });
-        return instruction;
+        unresolvedAddressLocations.push_back({ instructionLocation, address });
+        return address.instructionData.instruction;
     }
 }
