@@ -22,6 +22,7 @@ namespace kasm
 		void assemble(const std::string& asmPath, const std::string& programPath);
 	private:
 		std::uint32_t resolveAddress(std::uint32_t instructionLocation, Address address);
+		void defineLabel(const std::string& name, std::uint32_t location);
 
 		static const std::uint32_t MUST_RESOLVE = std::numeric_limits<std::uint32_t>::max();
 

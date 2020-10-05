@@ -19,12 +19,10 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <variant>
 #include <vector>
-
-#include "binaryBuilder.hpp"
-#include "common.hpp"
 
 struct lexcontext;
 }//%code requires
@@ -42,23 +40,23 @@ struct lexcontext
 
 namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 
-#define INSTRUCTION_RRR(op, r0, r1, r2)                           \
-	kasm::InstructionData instructionData;                        \
-	instructionData.opcode = kasm::Opcode::##op;                  \
-	instructionData.register0 = r0;                               \
-	instructionData.register1 = r1;                               \
-	instructionData.register2 = r2;                               \
-	ctx.assembler->binary.writeWord(instructionData.instruction); \
+#define INSTRUCTION_RRR(op, r0, r1, r2) {                           \
+	kasm::InstructionData instructionData;                          \
+	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.register0 = r0;                                 \
+	instructionData.register1 = r1;                                 \
+	instructionData.register2 = r2;                                 \
+	ctx.assembler->binary.writeWord(instructionData.instruction); } \
 
-#define INSTRUCTION_RRL(op, r0, r1, l)                            \
-	kasm::InstructionData instructionData;                        \
-	instructionData.opcode = kasm::Opcode::##op;                  \
-	instructionData.register0 = r0;                               \
-	instructionData.register1 = r1;                               \
-	instructionData.immediate = l;                                \
-	ctx.assembler->binary.writeWord(instructionData.instruction); \
+#define INSTRUCTION_RRL(op, r0, r1, l) {                            \
+	kasm::InstructionData instructionData;                          \
+	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.register0 = r0;                                 \
+	instructionData.register1 = r1;                                 \
+	instructionData.immediate = l;                                  \
+	ctx.assembler->binary.writeWord(instructionData.instruction); } \
 
-#define INSTRUCTION_RRA(op, r0, r1, a, t)                                                                \
+#define INSTRUCTION_RRA(op, r0, r1, a, t) {                                                              \
 	kasm::InstructionData instructionData;                                                               \
 	instructionData.opcode = kasm::Opcode::##op;                                                         \
 	instructionData.register0 = r0;                                                                      \
@@ -66,49 +64,69 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 	a.type = kasm::AddressType::##t;                                                                     \
 	a.instructionData = instructionData;                                                                 \
 	instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), a); \
-	ctx.assembler->binary.writeWord(instructionData.instruction);                                        \
+	ctx.assembler->binary.writeWord(instructionData.instruction); }                                      \
 
-#define INSTRUCTION_RR(op, r0, r1)                                \
-	kasm::InstructionData instructionData;                        \
-	instructionData.opcode = kasm::Opcode::##op;                  \
-	instructionData.register0 = r0;                               \
-	instructionData.register1 = r1;                               \
-	ctx.assembler->binary.writeWord(instructionData.instruction); \
+#define INSTRUCTION_RR(op, r0, r1) {                                \
+	kasm::InstructionData instructionData;                          \
+	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.register0 = r0;                                 \
+	instructionData.register1 = r1;                                 \
+	ctx.assembler->binary.writeWord(instructionData.instruction); } \
 
-#define INSTRUCTION_RL(op, r0, l)                                 \
-	kasm::InstructionData instructionData;                        \
-	instructionData.opcode = kasm::Opcode::##op;                  \
-	instructionData.register0 = r0;                               \
-	instructionData.immediate = l;                                \
-	ctx.assembler->binary.writeWord(instructionData.instruction); \
+#define INSTRUCTION_RL(op, r0, l) {                                 \
+	kasm::InstructionData instructionData;                          \
+	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.register0 = r0;                                 \
+	instructionData.immediate = l;                                  \
+	ctx.assembler->binary.writeWord(instructionData.instruction); } \
 
-#define INSTRUCTION_RA(op, r0, a, t)                                                                     \
+#define INSTRUCTION_RA(op, r0, a, t) {                                                                   \
 	kasm::InstructionData instructionData;                                                               \
 	instructionData.opcode = kasm::Opcode::##op;                                                         \
 	instructionData.register0 = r0;                                                                      \
 	a.type = kasm::AddressType::##t;                                                                     \
 	a.instructionData = instructionData;                                                                 \
 	instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), a); \
-	ctx.assembler->binary.writeWord(instructionData.instruction);                                        \
+	ctx.assembler->binary.writeWord(instructionData.instruction); }                                      \
 
-#define INSTRUCTION_R(op, r0)                                     \
-	kasm::InstructionData instructionData;                        \
-	instructionData.opcode = kasm::Opcode::##op;                  \
-	instructionData.register0 = r0;                               \
-	ctx.assembler->binary.writeWord(instructionData.instruction); \
+#define INSTRUCTION_R(op, r0) {                                     \
+	kasm::InstructionData instructionData;                          \
+	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.register0 = r0;                                 \
+	ctx.assembler->binary.writeWord(instructionData.instruction); } \
 
-#define INSTRUCTION_A(op, a, t)                                                                          \
+#define INSTRUCTION_A(op, a, t) {                                                                        \
 	kasm::InstructionData instructionData;                                                               \
 	instructionData.opcode = kasm::Opcode::##op;                                                         \
 	a.type = kasm::AddressType::##t;                                                                     \
 	a.instructionData = instructionData;                                                                 \
 	instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), a); \
-	ctx.assembler->binary.writeWord(instructionData.instruction);                                        \
+	ctx.assembler->binary.writeWord(instructionData.instruction); }                                      \
 
-#define INSTRUCTION_O(op)                                         \
-	kasm::InstructionData instructionData;                        \
-	instructionData.opcode = kasm::Opcode::##op;                  \
-	ctx.assembler->binary.writeWord(instructionData.instruction); \
+#define INSTRUCTION_O(op) {                                         \
+	kasm::InstructionData instructionData;                          \
+	instructionData.opcode = kasm::Opcode::##op;                    \
+	ctx.assembler->binary.writeWord(instructionData.instruction); } \
+
+union SplitWord
+{
+	std::uint32_t value;
+#pragma pack(push, 1)
+#if 'ABCD' == 0x41424344 // if little endian. trash code TODO: make portable
+	struct
+	{
+		std::uint32_t lo : kasm::IMMEDIATE_BIT;
+		std::uint32_t hi : kasm::IMMEDIATE_BIT;
+	};
+#else
+	struct
+	{
+		std::uint32_t hi : kasm::IMMEDIATE_BIT;
+		std::uint32_t lo : kasm::IMMEDIATE_BIT;
+	};
+#endif
+#pragma pack(pop)
+};
 
 }//%code
 
@@ -118,14 +136,14 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 %token TEXT DATA WORD BYTE ASCII ASCIIZ ALIGN SPACE
 
 %token ADD ADDI ADDIU ADDU AND ANDI BEQ BGEZ BGEZAL BGTZ BLEZ BLTZ BLTZAL BNE
-%token DIV DIVU J JAL JR LB LUI LW MFHI MFLO MULT MULTU NOP OR ORI SB SLL SLLV
-%token SLT SLTI SLTIU SLTU SRA SRL SRLV SUB SUBU SW SYS XOR XORI
+%token DIV DIVU J JAL JR LB LUI LW MFHI MFLO MULT MULTU OR ORI SB SLL SLLV NOR
+%token SLT SLTI SLTIU SLTU SRA SRL SRLV SUB SUBU SW SYS XOR XORI JALR
 
-%token MOV CLR
+%token MOV CLR B BAL BGT BLT BGE BLE BGTU BEGZ REM LI LA NOP NOT
 
 %type<std::string> IDENTIFIER STRING
 %type<std::uint32_t> LITERAL REGISTER
-%type<std::vector<std::variant<std::uint32_t, kasm::Address>>> literal_list
+%type<std::vector<std::variant<std::uint32_t, kasm::Address>>> literal_list literal_argument
 %type<kasm::Address> address
 
 %start statement_list
@@ -134,21 +152,17 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 
 statement_list
 	: statement_list statement
-    | statement_list labeled_statement
 	| %empty
 	;
 
-labeled_statement
-    : IDENTIFIER ':' statement { ctx.assembler->labelLocations[$1] = ctx.assembler->binary.getLocation(); }
-    | IDENTIFIER ':' END_OF_FILE { ctx.assembler->labelLocations[$1] = ctx.assembler->binary.getLocation(); }
-    ;
-
 statement
-	: END_OF_LINE
+    : IDENTIFIER ':' { ctx.assembler->defineLabel($1, ctx.assembler->binary.getLocation()); } statement
+    | IDENTIFIER ':' { ctx.assembler->defineLabel($1, ctx.assembler->binary.getLocation()); } END_OF_FILE
+	| END_OF_LINE
 	// Directives
-	| TEXT end_of_statement
-	| DATA end_of_statement
-    | WORD literal_list end_of_statement
+	| TEXT end_of_statement { INSTRUCTION_O(TEXT); }
+	| DATA end_of_statement { INSTRUCTION_O(DATA); }
+    | WORD literal_argument end_of_statement
     {
         ctx.assembler->binary.align(kasm::INSTRUCTION_SIZE);
         for (std::variant<std::uint32_t, kasm::Address> word : $2)
@@ -162,7 +176,7 @@ statement
             ctx.assembler->binary.writeWord(std::get<std::uint32_t>(word));
         }
     }
-    | BYTE literal_list end_of_statement
+    | BYTE literal_argument end_of_statement
     {
         for (std::variant<std::uint32_t, kasm::Address> byte : $2)
         {
@@ -175,14 +189,8 @@ statement
             ctx.assembler->binary.writeByte(static_cast<std::uint8_t>(std::get<std::uint32_t>(byte)));
         }
     }
-    | ASCII STRING end_of_statement
-    {
-        ctx.assembler->binary.writeString($2.c_str(), $2.size());
-    }
-    | ASCIIZ STRING end_of_statement
-    {
-        ctx.assembler->binary.writeString($2.c_str(), $2.size() + 1);
-    }
+    | ASCII STRING end_of_statement { ctx.assembler->binary.writeString($2.c_str(), $2.size()); }
+    | ASCIIZ STRING end_of_statement { ctx.assembler->binary.writeString($2.c_str(), $2.size() + 1); }
     | ALIGN LITERAL end_of_statement
     {
         unsigned int alignment = 1;
@@ -192,15 +200,13 @@ statement
         }
         ctx.assembler->binary.align(alignment);
     }
-    | SPACE LITERAL end_of_statement
-    {
-        ctx.assembler->binary.pad($2);
-    }
+    | SPACE LITERAL end_of_statement { ctx.assembler->binary.pad($2); }
 
 	// Instructions
     | ADD    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(ADD, $2, $4, $6); }
 	| ADDI   REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(ADDI, $2, $4, $6); }
 	| ADDIU  REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(ADDIU, $2, $4, $6); }
+	| ADDU   REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(ADDU, $2, $4, $6); }
 	| AND    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(AND, $2, $4, $6); }
 	| ANDI   REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(ANDI, $2, $4, $6); }
     | BEQ    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRA(BEQ, $2, $4, $6, DirectAddressOffset); }
@@ -223,7 +229,6 @@ statement
 	| MFLO   REGISTER                           end_of_statement { INSTRUCTION_R(MFLO, $2); }
 	| MULT   REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RR(MULT, $2, $4); }
 	| MULTU  REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RR(MULTU, $2, $4); }
-	| NOP                                       end_of_statement { INSTRUCTION_O(NOP); }
 	| OR     REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(OR, $2, $4, $6); }
 	| ORI    REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(OR, $2, $4, $6); }
 	| SB     REGISTER ',' address               end_of_statement { INSTRUCTION_RA(SB, $2, $4, IndirectAddressAbsolute); }
@@ -232,6 +237,7 @@ statement
 	| SLT    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(SLLV, $2, $4, $6); }
 	| SLTI   REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(SLTI, $2, $4, $6); }
 	| SLTIU  REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(SLTIU, $2, $4, $6); }
+	| SLTU   REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(SLTU, $2, $4, $6); }
 	| SRA    REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(SRA, $2, $4, $6); }
 	| SRL    REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(SRL, $2, $4, $6); }
 	| SRLV   REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(SRLV, $2, $4, $6); }
@@ -241,64 +247,119 @@ statement
 	| SYS                                       end_of_statement { INSTRUCTION_O(SYS); }
 	| XOR    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(XOR, $2, $4, $6); }
 	| XORI   REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(XORI, $2, $4, $6); }
+	| JALR   REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RR(JALR, $2, $4); }
+	| NOR    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(NOR, $2, $4, $6); }
 
 	// Pseudoinstructions
-	| MOV    REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RRL(OR, $2, $4, 0); }
-	| CLR    REGISTER                           end_of_statement { INSTRUCTION_RRL(OR, $2, 0, 0); }
+	| MOV    REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RRL(OR, $2, $4, kasm::ZERO); }
+	| CLR    REGISTER                           end_of_statement { INSTRUCTION_RRL(OR, $2, kasm::ZERO, kasm::ZERO); }
 	| ADD    REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(ADDI, $2, $4, $6); }
+	| JALR   REGISTER                           end_of_statement { INSTRUCTION_RR(JALR, $2, kasm::RA); }
+	| NOP                                       end_of_statement { INSTRUCTION_RRL(SLL, kasm::ZERO, kasm::ZERO, 0); }
+	| B      address                            end_of_statement { INSTRUCTION_RRA(BEQ, kasm::ZERO, kasm::ZERO, $2, DirectAddressOffset); }
+	| BAL    address                            end_of_statement { INSTRUCTION_RA(BGEZAL, kasm::ZERO, $2, DirectAddressOffset); }
+	| BGT    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $4, $2); INSTRUCTION_RRA(BNE, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
+	| BLT    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $2, $4); INSTRUCTION_RRA(BNE, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
+	| BGE    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $2, $4); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
+	| BLE    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $4, $2); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
+	| BGTU   REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRR(SLTU, kasm::AT, $2, $4); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
+	| B      REGISTER ',' address               end_of_statement { INSTRUCTION_RRA(BEQ, $2, kasm::ZERO, $4, DirectAddressOffset); }
+	| BEQ    REGISTER ',' LITERAL  ',' address  end_of_statement { INSTRUCTION_RRL(ORI, kasm::AT, kasm::ZERO, $4); INSTRUCTION_RRA(BEQ, $2, kasm::AT, $6, DirectAddressOffset); }
+	| BNE    REGISTER ',' LITERAL  ',' address  end_of_statement { INSTRUCTION_RRL(ORI, kasm::AT, kasm::ZERO, $4); INSTRUCTION_RRA(BNE, $2, kasm::AT, $6, DirectAddressOffset); }
+	| MULT   REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RR(MULT, $4, $6); INSTRUCTION_R(MFLO, $2); }
+	| DIV    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RR(DIV, $4, $6); INSTRUCTION_R(MFLO, $2); }
+	| REM    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RR(DIV, $4, $6); INSTRUCTION_R(MFHI, $2); }
+	| NOT    REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RRR(NOR, $2, $4, kasm::ZERO); }
+	| LI     REGISTER ',' LITERAL               end_of_statement
+	{
+		SplitWord l = {$4};
+		
+		if (l.hi)
+		{
+			INSTRUCTION_RL(LUI, $2, l.hi);
+			INSTRUCTION_RRL(ORI, $2, $2, l.lo);
+		}
+		else
+		{
+			INSTRUCTION_RRL(ORI, $2, kasm::ZERO, l.lo);
+		}
+	}
+	| LA     REGISTER ',' address               end_of_statement
+	{
+		$4.type = kasm::AddressType::DirectAddressAbsoluteLoad;
+		$4.reg = $2;
+		$4.instructionData.instruction = 0;
+		SplitWord l = { ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4) };
+		if (l.value)
+		{
+			INSTRUCTION_RL(LUI, $2, l.hi);
+			INSTRUCTION_RRL(ORI, $2, $2, l.lo);
+		}
+		else
+		{
+			ctx.assembler->binary.pad(kasm::INSTRUCTION_SIZE * 2);
+		}
+	}
     ;
 
+literal_argument
+	: literal_list                       { $$ = $1; }
+	| LITERAL ':' LITERAL                { $$ = std::vector<std::variant<std::uint32_t, kasm::Address>>($3, $1); }
+	| IDENTIFIER ':' LITERAL             { $$ = std::vector<std::variant<std::uint32_t, kasm::Address>>($3, kasm::Address{kasm::AddressType::Invalid, $1}); }
+	| IDENTIFIER '+' LITERAL ':' LITERAL { $$ = std::vector<std::variant<std::uint32_t, kasm::Address>>($5, kasm::Address{kasm::AddressType::Invalid, $1, $3}); }
+	;
+
 literal_list
-    : LITERAL                                   { $$ = std::vector<std::variant<std::uint32_t, kasm::Address>>($1); }
-    | literal_list ',' LITERAL                  { $1.push_back($3); $$ = $1; }
-	| literal_list ',' IDENTIFIER               { $1.push_back(kasm::Address{kasm::AddressType::Invalid, $3}); $$ = $1; }
-	| literal_list ',' IDENTIFIER '+' LITERAL   { $1.push_back(kasm::Address{kasm::AddressType::Invalid, $3, $5}); $$ = $1; }
+    : LITERAL                                 { $$ = {$1}; }
+    | literal_list ',' LITERAL                { $1.push_back($3); $$ = $1; }
+	| literal_list ',' IDENTIFIER             { $1.push_back(kasm::Address{kasm::AddressType::Invalid, $3}); $$ = $1; }
+	| literal_list ',' IDENTIFIER '+' LITERAL { $1.push_back(kasm::Address{kasm::AddressType::Invalid, $3, $5}); $$ = $1; }
     ;
 
 address
     : IDENTIFIER
 	{
-		kasm::Address addr;
+		kasm::Address addr = {};
 		addr.label = $1;
 		$$ = addr;
 	}
     | IDENTIFIER '+' LITERAL
 	{
-		kasm::Address addr;
+		kasm::Address addr = {};
 		addr.label = $1;
 		addr.offset = $3;
 		$$ = addr;
 	}
     | '(' REGISTER ')'
 	{
-		kasm::Address addr;
+		kasm::Address addr = {};
 		addr.reg = $2;
 		$$ = addr;
 	}
     | LITERAL '(' REGISTER ')'
 	{
-		kasm::Address addr;
+		kasm::Address addr = {};
 		addr.offset = $1;
 		addr.reg = $3;
 		$$ = addr;
 	}
     | IDENTIFIER '(' REGISTER ')'
 	{
-		kasm::Address addr;
+		kasm::Address addr = {};
 		addr.label = $1;
 		addr.reg = $3;
 		$$ = addr;
 	}
     | LITERAL '+' LITERAL '(' REGISTER ')'
 	{
-		kasm::Address addr;
+		kasm::Address addr = {};
 		addr.offset = $1 + $3;
 		addr.reg = $5;
 		$$ = addr;
 	}
     | IDENTIFIER '+' LITERAL '(' REGISTER ')'
 	{
-		kasm::Address addr;
+		kasm::Address addr = {};
 		addr.label = $1;
 		addr.offset = $3;
 		addr.reg = $5;
@@ -387,7 +448,6 @@ init:
 	"mflo"|"MFLO"       { token(MFLO); }
 	"mult"|"MULT"       { token(MULT); }
 	"multu"|"MULTU"     { token(MULTU); }
-	"nop"|"NOP"         { token(NOP); }
 	"or"|"OR"           { token(OR); }
 	"ori"|"ORI"         { token(ORI); }
 	"sb"|"SB"           { token(SB); }
@@ -406,10 +466,25 @@ init:
 	"sys"|"SYS"         { token(SYS); }
 	"xor"|"XOR"         { token(XOR); }
 	"xori"|"XORI"       { token(XORI); }
+	"jalr"|"JALR"       { token(JALR); }
+	"nor"|"NOR"         { token(NOR); }
 
 	// Pseudoinstructions
 	"mov"|"MOV"         { token(MOV); }
 	"clr"|"CLR"         { token(CLR); }
+	"b"|"B"             { token(B); }
+	"bal"|"BAL"         { token(BAL); }
+	"bgt"|"BGT"         { token(BGT); }
+	"blt"|"BLT"         { token(BLT); }
+	"bge"|"BGE"         { token(BGE); }
+	"ble"|"BLE"         { token(BLE); }
+	"bgtu"|"BGTU"       { token(BGTU); }
+	"begz"|"BEGZ"       { token(BEGZ); }
+	"rem"|"REM"         { token(REM); }
+	"li"|"LI"           { token(LI); }
+	"la"|"LA"           { token(LA); }
+	"nop"|"NOP"         { token(NOP); }
+	"not"|"NOT"         { token(NOT); }
 
 	// Identifier
 	[a-zA-Z_][a-zA-Z_0-9]* { tokenv(IDENTIFIER, std::string(anchor, ctx.cursor)); }
@@ -481,37 +556,44 @@ namespace kasm
 
 			if (unresolvedAddressLocation.address.type == AddressType::DirectAddressAbsoluteByte)
 			{
+				std::cout << "Label Resolved: " << unresolvedAddressLocation.address.label << " to " << instruction << std::endl;
 				binary.writeByte(static_cast<std::uint8_t>(instruction));
+			}
+			else if (unresolvedAddressLocation.address.type == AddressType::DirectAddressAbsoluteLoad)
+			{
+				std::cout << "Label Resolved: " << unresolvedAddressLocation.address.label << " to " << instruction << std::endl;
+				SplitWord l = { instruction };
+				INSTRUCTION_RL(LUI, unresolvedAddressLocation.address.reg, l.hi);
+				INSTRUCTION_RRL(ORI, unresolvedAddressLocation.address.reg, unresolvedAddressLocation.address.reg, l.lo);
 			}
 			else
 			{
+				std::cout << "Label Resolved: " << unresolvedAddressLocation.address.label << "+" << unresolvedAddressLocation.address.offset << "(" << unresolvedAddressLocation.address.reg << ") @ " << (instruction & 0xFFFF) << std::endl;
 				binary.writeWord(instruction);
 			}
         }
 
         binary.setLocation(BinaryBuilder::END);
         binary.align(INSTRUCTION_SIZE);
+		binary.close();
     }
 
     std::uint32_t Assembler::resolveAddress(std::uint32_t instructionLocation, Address address)
     {
-		if (address.type == AddressType::IndirectAddressAbsolute)
-		{
-			address.instructionData.register1 = address.reg;
-		}
-
 		if (address.label == "")
 		{
 			switch (address.type)
 			{
 			case AddressType::DirectAddressAbsolute:
-				return address.instructionData.instruction | address.offset;
-			case AddressType::DirectAddressOffset:
-				return address.instructionData.instruction | (address.offset - instructionLocation);
+				address.instructionData.directAddressAbsolute = address.offset;
+				return address.instructionData.instruction;
 			case AddressType::IndirectAddressAbsolute:
-				return address.instructionData.instruction | address.offset;
-			case AddressType::DirectAddressAbsoluteWord:
-			case AddressType::DirectAddressAbsoluteByte:
+				address.instructionData.register1 = address.reg;
+				address.instructionData.directAddressOffset = address.offset;
+				return address.instructionData.instruction;
+			case AddressType::DirectAddressOffset:
+				address.instructionData.directAddressOffset = address.offset;
+				return address.instructionData.instruction;
 			default:
 				break;
 			}
@@ -521,15 +603,19 @@ namespace kasm
 			switch (address.type)
 			{
 			case AddressType::DirectAddressAbsolute:
-				return address.instructionData.instruction | (labelLocations.at(address.label) + address.offset);
-			case AddressType::DirectAddressOffset:
-				return address.instructionData.instruction | (labelLocations.at(address.label) + address.offset - instructionLocation);
+				address.instructionData.directAddressAbsolute = labelLocations.at(address.label) + address.offset;
+				return address.instructionData.instruction;
 			case AddressType::IndirectAddressAbsolute:
-				return address.instructionData.instruction | (labelLocations.at(address.label) + address.offset);
+				address.instructionData.register1 = address.reg;
+				address.instructionData.directAddressOffset = labelLocations.at(address.label) + address.offset;
+				return address.instructionData.instruction;
+			case AddressType::DirectAddressOffset:
+				address.instructionData.directAddressOffset = labelLocations.at(address.label) + address.offset;
+				return address.instructionData.instruction;
 			case AddressType::DirectAddressAbsoluteWord:
-				return labelLocations.at(address.label);
 			case AddressType::DirectAddressAbsoluteByte:
-				return labelLocations.at(address.label);
+			case AddressType::DirectAddressAbsoluteLoad:
+				return labelLocations.at(address.label) + address.offset;
 			default:
 				break;
 			}
@@ -539,7 +625,22 @@ namespace kasm
                 throw std::exception(std::string("Unresolved Label: " + address.label).c_str());
 		}
 
+
+		std::cout << "Label Unresolved: " << address.label << "+" << address.offset << "(" << address.reg << ") @ " << instructionLocation << std::endl;
         unresolvedAddressLocations.push_back({ instructionLocation, address });
         return address.instructionData.instruction;
     }
+
+	void Assembler::defineLabel(const std::string& name, std::uint32_t location)
+	{
+		if (labelLocations.count(name))
+		{
+            throw std::exception(std::string("Redefined Label: " + name).c_str());
+		}
+		else
+		{
+			std::cout << "Label Defined: " << name << " @ " << location << std::endl;
+			labelLocations[name] = location;
+		}
+	}
 }

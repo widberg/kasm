@@ -86,7 +86,6 @@ namespace kasm
         MFLO,
         MULT,
         MULTU,
-        NOP,
         OR,
         ORI,
         SB,
@@ -105,9 +104,13 @@ namespace kasm
         SYS,
         XOR,
         XORI,
+        JALR,
+        NOR,
+        TEXT,
+        DATA
     };
 
-    enum Register : std::uint8_t
+    enum Register : std::uint32_t
     {
         ZERO,
         AT,
@@ -131,6 +134,7 @@ namespace kasm
         IndirectAddressAbsolute,
         DirectAddressAbsoluteWord,
         DirectAddressAbsoluteByte,
+        DirectAddressAbsoluteLoad
     };
 
     struct Address
@@ -138,7 +142,7 @@ namespace kasm
         AddressType type;
         std::string label;
         std::uint32_t offset;
-        std::uint8_t reg;
+        std::uint32_t reg;
         InstructionData instructionData;
     };
 }

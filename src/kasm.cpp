@@ -1,14 +1,16 @@
 #include <iostream>
 
 #include "assembler.hpp"
+#include "disassembler.hpp"
 //#include "compiler.hpp"
-//#include "virtualMachine.hpp"
+#include "virtualMachine.hpp"
 
 int main()
 {
     kasm::Assembler assembler;
+	kasm::Disassembler disassembler;
 	//Compiler compiler;
-    //kasm::VirtualMachine virtualMachine;
+    kasm::VirtualMachine virtualMachine;
 
 	int exitCode = 0;
 
@@ -17,8 +19,9 @@ int main()
 		//compiler.compile("source.k", "source_asm.kasm");
 		//assembler.assemble("source_asm.kasm", "program.kexe");
 		assembler.assemble("source.kasm", "program.kexe");
-		//virtualMachine.loadProgram("program.kexe");
-		//exitCode = virtualMachine.execute();
+		disassembler.disassemble("program.kexe", "d_source.kasm");
+		virtualMachine.loadProgram("program.kexe");
+		exitCode = virtualMachine.execute();
 	}
 	catch (const std::exception& e)
 	{

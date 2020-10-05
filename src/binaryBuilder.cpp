@@ -1,5 +1,7 @@
 #include "binaryBuilder.hpp"
 
+#include <exception>
+
 namespace kasm
 {
 	BinaryBuilder::BinaryBuilder(const std::string& programPath)
@@ -10,15 +12,30 @@ namespace kasm
 	void BinaryBuilder::open(const std::string& programPath)
 	{
 		programFile.open(programPath, std::ios::binary);
+		if (programFile.fail())
+		{
+			throw std::exception(std::string("Unable to open binary file: " + programPath).c_str());
+		}
+	}
+
+	void BinaryBuilder::close()
+	{
+		unsigned int newEOFLocation = getLocation();
+		setLocation(END);
+		unsigned int trueEOFLocation = getLocation();
+		unsigned int eofPadding = newEOFLocation - trueEOFLocation;
+		if (eofPadding > 0)
+		{
+			pad(eofPadding - 1);
+			writeByte(0);
+		}
+		programFile.close();
 	}
 
 	void BinaryBuilder::align(unsigned int alignment)
 	{
-		unsigned int r = programFile.tellp() % alignment;
-		if (r)
-		{
-			pad(alignment - r);
-		}
+		unsigned int r = getLocation() % alignment;
+		if (r) pad(alignment - r);
 	}
 
 	void BinaryBuilder::writeWord(std::uint32_t word)
@@ -45,17 +62,16 @@ namespace kasm
 	{
 		if (size > 0)
 		{
-			programFile.seekp(size - 1, std::ios::cur);
-			programFile.write("", 1);
+			programFile.seekp(size, std::ios::cur);
 		}
 	}
 
-	long BinaryBuilder::getLocation()
+	std::uint32_t BinaryBuilder::getLocation()
 	{
-		return static_cast<long>(programFile.tellp());
+		return static_cast<std::uint32_t>(programFile.tellp());
 	}
 
-	void BinaryBuilder::setLocation(long location)
+	void BinaryBuilder::setLocation(std::uint32_t location)
 	{
 		if (location == END)
 		{

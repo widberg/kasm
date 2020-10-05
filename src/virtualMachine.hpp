@@ -1,8 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <vector>
+
+#include "common.hpp"
 
 namespace kasm
 {
@@ -18,15 +21,23 @@ namespace kasm
 	private:
 		void advancePc();
 		void systemCall();
-		void setRegister(std::uint32_t reg, std::uint32_t value);
-		std::uint32_t getRegister(std::uint32_t reg);
+		std::uint32_t resolveAddress(const InstructionData& instructionData, AddressType type);
 
-		std::uint32_t registers[32];
-		std::uint32_t pc;
+		std::uint32_t pc, hi, lo;
 		bool shouldExit;
 		int exitCode;
 
 		std::vector<std::uint8_t> program;
+
+		class Registers
+		{
+		public:
+			void clear() { std::fill(std::begin(registers), std::end(registers), 0); }
+			std::uint32_t operator [](std::size_t i) const { return i ? registers[i] : 0; }
+			std::uint32_t& operator [](std::size_t i) { return registers[i]; }
+		private:
+			std::uint32_t registers[32];
+		} registers;
 
 		enum Syscall : std::uint8_t
 		{

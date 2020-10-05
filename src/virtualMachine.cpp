@@ -1,6 +1,5 @@
 #include "virtualMachine.hpp"
 
-#include <algorithm>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
@@ -8,8 +7,6 @@
 #include <iomanip>
 #include <iostream>
 #include <unordered_map>
-
-#include "common.hpp"
 
 namespace kasm
 {
@@ -20,7 +17,7 @@ namespace kasm
 
     int VirtualMachine::execute()
     {
-        std::fill(std::begin(registers), std::end(registers), 0);
+        registers.clear();
         pc = 0;
         shouldExit = false;
         exitCode = 0;
@@ -36,132 +33,209 @@ namespace kasm
 
             switch (d.opcode)
             {
-            case NOP:
-                advancePc();
-                break;
-            case SYSTEM_CALL:
-                systemCall();
-                advancePc();
-                break;
-            case JUMP:
-                pc = address;
-                break;
-            case JUMP_REGISTER:
-                pc = getRegister(d.register0);
-                break;
-            case JUMP_AND_LINK:
-                registers[RA] = pc + INSTRUCTION_SIZE;
-                pc = address;
-                break;
-            case JUMP_AND_LINK_REGISTER:
-                registers[RA] = pc + INSTRUCTION_SIZE;
-                pc = getRegister(d.register0);
-                break;
-            case BRANCH_UNCONDITIONAL:
-                pc = address;
-                break;
-            case BRANCH_EQUALS:
-                if (getRegister(d.register0) == getRegister(d.register1))
-                {
-                    pc = address;
-                }
-                else
-                {
-                    advancePc();
-                }
-                break;
-            case BRANCH_NOT_EQUALS:
-                if (getRegister(d.register0) != getRegister(d.register1))
-                {
-                    pc = address;
-                }
-                else
-                {
-                    advancePc();
-                }
-                break;
-            case BRANCH_LESS_THAN:
-                if (getRegister(d.register0) < getRegister(d.register1))
-                {
-                    pc = address;
-                }
-                else
-                {
-                    advancePc();
-                }
-                break;
-            case BRANCH_GREATER_THAN:
-                if (getRegister(d.register0) > getRegister(d.register1))
-                {
-                    pc = address;
-                }
-                else
-                {
-                    advancePc();
-                }
-                break;
-            case BRANCH_LESS_THAN_OR_EQUALS:
-                if (getRegister(d.register0) <= getRegister(d.register1))
-                {
-                    pc = address;
-                }
-                else
-                {
-                    advancePc();
-                }
-                break;
-            case BRANCH_GREATER_THAN_OR_EQUALS:
-                if (getRegister(d.register0) >= getRegister(d.register1))
-                {
-                    pc = address;
-                }
-                else
-                {
-                    advancePc();
-                }
-                break;
-            case LOAD_IMMEDIATE:
-                setRegister(d.register0, d.immediate);
-                advancePc();
-                break;
-            case LOAD_ADDRESS:
-                setRegister(d.register0, address);
-                advancePc();
-                break;
-            case LOAD_WORD:
-                setRegister(d.register0, *reinterpret_cast<std::uint32_t*>(program.data() + address));
-                advancePc();
-                break;
-            case SAVE_WORD:
-                *reinterpret_cast<std::uint32_t*>(program.data() + address) = getRegister(d.register0);
-                advancePc();
-                break;
-            case LOAD_BYTE:
-                setRegister(d.register0, program[address]);
-                advancePc();
-                break;
-            case SAVE_BYTE:
-                program[address] = getRegister(d.register0);
-                advancePc();
-                break;
             case ADD:
-                setRegister(d.register0, getRegister(d.register1) + getRegister(d.register2));
+                registers[d.register0] = registers[d.register1] + registers[d.register2];
+                advancePc();
+                break;
+            case ADDI:
+                registers[d.register0] = registers[d.register1] + d.immediate;
+                advancePc();
+                break;
+            case ADDIU:
+                registers[d.register0] = registers[d.register1] + d.immediate;
+                advancePc();
+                break;
+            case ADDU:
+                registers[d.register0] = registers[d.register1] + registers[d.register2];
+                advancePc();
+                break;
+            case AND:
+                registers[d.register0] = registers[d.register1] & registers[d.register2];
+                advancePc();
+                break;
+            case ANDI:
+                registers[d.register0] = registers[d.register1] & d.immediate;
+                advancePc();
+                break;
+            case BEQ:
+                if (registers[d.register0] == registers[d.register1]) pc = resolveAddress(d, AddressType::DirectAddressOffset); else advancePc();
+                break;
+            case BGEZ:
+                if (registers[d.register0] >= 0) pc = resolveAddress(d, AddressType::DirectAddressOffset); else advancePc();
+                break;
+            case BGEZAL:
+                if (registers[d.register0] >= 0)
+                {
+                    registers[RA] = pc + INSTRUCTION_SIZE;
+                    pc = resolveAddress(d, AddressType::DirectAddressOffset);
+                }
+                else
+                {
+                    advancePc();
+                }
+                break;
+            case BGTZ:
+                if (registers[d.register0] > 0) pc = resolveAddress(d, AddressType::DirectAddressOffset); else advancePc();
+                break;
+            case BLEZ:
+                if (registers[d.register0] <= 0) pc = resolveAddress(d, AddressType::DirectAddressOffset); else advancePc();
+                break;
+            case BLTZ:
+                if (registers[d.register0] < 0) pc = resolveAddress(d, AddressType::DirectAddressOffset); else advancePc();
+                break;
+            case BLTZAL:
+                advancePc();
+                if (registers[d.register0] < 0)
+                {
+                    registers[RA] = pc + INSTRUCTION_SIZE;
+                    pc = resolveAddress(d, AddressType::DirectAddressOffset);
+                }
+                else
+                {
+                    advancePc();
+                }
+                break;
+            case BNE:
+                if (registers[d.register0] != registers[d.register1]) pc = resolveAddress(d, AddressType::DirectAddressOffset); else advancePc();
+                break;
+            case DIV:
+                lo = registers[d.register0] / registers[d.register1];
+                hi = registers[d.register0] % registers[d.register1];
+                advancePc();
+                break;
+            case DIVU:
+                lo = registers[d.register0] / registers[d.register1];
+                hi = registers[d.register0] % registers[d.register1];
+                advancePc();
+                break;
+            case J:
+                pc = resolveAddress(d, AddressType::DirectAddressAbsolute);
+                break;
+            case JAL:
+                registers[RA] = pc + INSTRUCTION_SIZE;
+                pc = resolveAddress(d, AddressType::DirectAddressAbsolute);
+                break;
+            case JR:
+                pc = registers[d.register0];
+                break;
+            case LB:
+                registers[d.register0] = program[resolveAddress(d, AddressType::IndirectAddressAbsolute)];
+                advancePc();
+                break;
+            case LUI:
+                registers[d.register0] = d.immediate << (INSTRUCTION_BIT / 2);
+                advancePc();
+                break;
+            case LW:
+                registers[d.register0] = *reinterpret_cast<std::uint32_t*>(program.data() + resolveAddress(d, AddressType::IndirectAddressAbsolute));
+                advancePc();
+                break;
+            case MFHI:
+                registers[d.register0] = hi;
+                advancePc();
+                break;
+            case MFLO:
+                registers[d.register0] = lo;
+                advancePc();
+                break;
+            case MULT:
+            {
+                std::uint64_t product = static_cast<std::uint64_t>(registers[d.register0]) * static_cast<std::uint64_t>(registers[d.register1]);
+                lo = static_cast<std::uint32_t>(product);
+                hi = static_cast<std::uint32_t>(product >> 32);
+                advancePc();
+                break;
+            }
+            case MULTU:
+            {
+                std::uint64_t product = static_cast<std::uint64_t>(registers[d.register0]) * static_cast<std::uint64_t>(registers[d.register1]);
+                lo = static_cast<std::uint32_t>(product);
+                hi = static_cast<std::uint32_t>(product >> 32);
+                advancePc();
+                break;
+            }
+            case OR:
+                registers[d.register0] = registers[d.register1] | registers[d.register2];
+                advancePc();
+                break;
+            case ORI:
+                registers[d.register0] = registers[d.register1] | d.immediate;
+                advancePc();
+                break;
+            case SB:
+                program[resolveAddress(d, AddressType::IndirectAddressAbsolute)] = registers[d.register0];
+                advancePc();
+                break;
+            case SLL:
+                registers[d.register0] = registers[d.register1] << d.immediate;
+                advancePc();
+                break;
+            case SLLV:
+                registers[d.register0] = registers[d.register1] << registers[d.register2];
+                advancePc();
+                break;
+            case SLT:
+                registers[d.register0] = registers[d.register1] < registers[d.register2];
+                advancePc();
+                break;
+            case SLTI:
+                registers[d.register0] = registers[d.register1] < d.immediate;
+                advancePc();
+                break;
+            case SLTIU:
+                registers[d.register0] = registers[d.register1] < d.immediate;
+                advancePc();
+                break;
+            case SLTU:
+                registers[d.register0] = registers[d.register1] < registers[d.register2];
+                advancePc();
+                break;
+            case SRA:
+                registers[d.register0] = (registers[d.register1] >> d.immediate) | ~(~0U >> d.immediate);
+                advancePc();
+                break;
+            case SRL:
+                registers[d.register0] = registers[d.register1] >> d.immediate;
+                advancePc();
+                break;
+            case SRLV:
+                registers[d.register0] = registers[d.register1] >> registers[d.register2];
                 advancePc();
                 break;
             case SUB:
-                setRegister(d.register0, getRegister(d.register1) - getRegister(d.register2));
+                registers[d.register0] = registers[d.register1] - registers[d.register2];
                 advancePc();
                 break;
-            case MUL:
-                setRegister(d.register0, getRegister(d.register1) * getRegister(d.register2));
+            case SUBU:
+                registers[d.register0] = registers[d.register1] - registers[d.register2];
                 advancePc();
                 break;
-            case DIV:
-                setRegister(d.register0, getRegister(d.register1) / getRegister(d.register2));
+            case SW:
+                *reinterpret_cast<std::uint32_t*>(program.data() + resolveAddress(d, AddressType::IndirectAddressAbsolute)) = registers[d.register0];
                 advancePc();
                 break;
-            case MOD:
-                setRegister(d.register0, getRegister(d.register1) % getRegister(d.register2));
+            case SYS:
+                systemCall();
+                advancePc();
+                break;
+            case XOR:
+                registers[d.register0] = registers[d.register1] ^ registers[d.register2];
+                advancePc();
+                break;
+            case XORI:
+                registers[d.register0] = registers[d.register1] ^ d.immediate;
+                advancePc();
+                break;
+            case JALR:
+                registers[d.register1] = pc + INSTRUCTION_SIZE;
+                pc = registers[d.register0];
+                break;
+            case NOR:
+                registers[d.register0] = ~(registers[d.register1] | registers[d.register2]);
+                advancePc();
+                break;
+            case TEXT:
+            case DATA:
                 advancePc();
                 break;
             default:
@@ -214,9 +288,13 @@ namespace kasm
             std::cout << registers[A0];
             break;
         case READ_CHAR:
-            std::cin >> reinterpret_cast<char&>(registers[A0]);
+        {
+            char c;
+            std::cin >> c;
+            registers[A0] = static_cast<std::uint32_t>(c);
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             break;
+        }
         case WRITE_CHAR:
             std::cout << static_cast<char>(registers[A0]);
             break;
@@ -252,15 +330,18 @@ namespace kasm
         }
     }
 
-    void VirtualMachine::setRegister(std::uint32_t reg, std::uint32_t value)
+    std::uint32_t VirtualMachine::resolveAddress(const InstructionData& instructionData, AddressType type)
     {
-        if (reg == ZERO) return;
-        registers[reg] = value;
-    }
-
-    std::uint32_t VirtualMachine::getRegister(std::uint32_t reg)
-    {
-        if (reg == ZERO) return 0;
-        return registers[reg];
+        switch (type)
+        {
+        case kasm::AddressType::DirectAddressAbsolute:
+            return instructionData.directAddressAbsolute;
+        case kasm::AddressType::DirectAddressOffset:
+            return instructionData.directAddressOffset + pc;
+        case kasm::AddressType::IndirectAddressAbsolute:
+            return registers[instructionData.register1] + instructionData.directAddressOffset;
+        default:
+            break;
+        }
     }
 }
