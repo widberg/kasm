@@ -21,20 +21,14 @@ namespace kasm
 
 		void assemble(const std::string& asmPath, const std::string& programPath);
 	private:
-		std::uint32_t resolveAddress(std::uint32_t instructionLocation, Address address);
+		bool resolveAddress(AddressData& address, bool mustResolve = false);
 		void defineLabel(const std::string& name, std::uint32_t location);
 
-		static const std::uint32_t MUST_RESOLVE = std::numeric_limits<std::uint32_t>::max();
-
-		struct UnresolvedAddressLocation
-		{
-			std::uint32_t location;
-			Address address;
-		};
+		static const bool MUST_RESOLVE = true;
 
 		BinaryBuilder binary;
 		std::unordered_map<std::string, std::uint32_t> labelLocations;
-		std::vector<UnresolvedAddressLocation> unresolvedAddressLocations;
+		std::vector<AddressData> unresolvedAddressLocations;
 
 		friend class yy::parser;
 	};

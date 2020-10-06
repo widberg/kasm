@@ -28,7 +28,7 @@ namespace kasm
         };
         std::uint32_t immediate : IMMEDIATE_BIT;
         std::uint32_t directAddressAbsolute : DIRECT_ADDRESS_ABSOLUTE_BIT;
-        std::uint32_t directAddressOffset : DIRECT_ADDRESS_OFFSET_BIT;
+        std::int32_t directAddressOffset : DIRECT_ADDRESS_OFFSET_BIT;
 #else
         struct
         {
@@ -52,7 +52,7 @@ namespace kasm
         {
             std::uint32_t : OPCODE_BIT;
             std::uint32_t : REGISTER_BIT * 2;
-            std::uint32_t directAddressOffset : DIRECT_ADDRESS_OFFSET_BIT;
+            std::int32_t directAddressOffset : DIRECT_ADDRESS_OFFSET_BIT;
         };
 #endif
 #pragma pack(pop)
@@ -131,18 +131,25 @@ namespace kasm
         Invalid,
         DirectAddressAbsolute,
         DirectAddressOffset,
-        IndirectAddressAbsolute,
+        IndirectAddressOffset,
         DirectAddressAbsoluteWord,
         DirectAddressAbsoluteByte,
         DirectAddressAbsoluteLoad
     };
 
-    struct Address
+    struct AddressData
     {
+        AddressData()
+            : type(AddressType::Invalid) {};
+
+        AddressData(const std::string& aLabel)
+            : label(aLabel) {};
+
         AddressType type;
-        std::string label;
-        std::uint32_t offset;
-        std::uint32_t reg;
+        std::uint32_t position;
         InstructionData instructionData;
+        std::string label;
+        std::int32_t offset = 0;
+        std::uint32_t reg = 0;
     };
 }

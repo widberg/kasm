@@ -124,11 +124,11 @@ namespace kasm
 				}
 				if (instructionFormat & DAA)
 				{
-					asmFile << "_" << d.directAddressAbsolute - d.directAddressAbsolute % INSTRUCTION_SIZE << "+" << d.directAddressAbsolute % INSTRUCTION_SIZE << ", ";
+					asmFile << "_" << std::dec << std::setw(4) << std::setfill('0') << d.directAddressAbsolute << ", ";
 				}
 				if (instructionFormat & DAO)
 				{
-					asmFile << "_" << d.directAddressOffset + pc - ((d.directAddressOffset + pc) % INSTRUCTION_SIZE )<< "+" << (d.directAddressOffset + pc) % INSTRUCTION_SIZE << ", ";
+					asmFile << "_" << std::dec << std::setw(4) << std::setfill('0') << d.directAddressOffset + pc << ", ";
 				}
 				if (instructionFormat & I)
 				{
@@ -136,7 +136,17 @@ namespace kasm
 				}
 				if (instructionFormat & IDA)
 				{
-					asmFile << "_" << d.directAddressOffset - d.directAddressOffset % INSTRUCTION_SIZE << "+" << d.directAddressOffset % INSTRUCTION_SIZE << "(" << registerNames[d.register1] << "), ";
+					std::uint32_t offset = (d.directAddressOffset + pc) % INSTRUCTION_SIZE;
+					asmFile << "_" << std::dec << std::setw(4) << std::setfill('0') << (d.directAddressOffset + pc) - offset;
+					if (offset)
+					{
+						asmFile << "+" << offset;
+					}
+					if (d.register1)
+					{
+						asmFile << "(" << registerNames[d.register1] << ")";
+					}
+					asmFile << ", ";
 				}
 
 				if (instructionFormat != NONE)
@@ -147,7 +157,7 @@ namespace kasm
 			}
 			else
 			{
-				asmFile << "0x" << std::hex << std::setw(8) << std::setfill('0') << d.instruction << std::endl;
+				asmFile << ".word 0x" << std::hex << std::setw(8) << std::setfill('0') << d.instruction << std::endl;
 			}
 		}
 	}

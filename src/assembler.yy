@@ -56,15 +56,16 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 	instructionData.immediate = l;                                  \
 	ctx.assembler->binary.writeWord(instructionData.instruction); } \
 
-#define INSTRUCTION_RRA(op, r0, r1, a, t) {                                                              \
-	kasm::InstructionData instructionData;                                                               \
-	instructionData.opcode = kasm::Opcode::##op;                                                         \
-	instructionData.register0 = r0;                                                                      \
-	instructionData.register1 = r1;                                                                      \
-	a.type = kasm::AddressType::##t;                                                                     \
-	a.instructionData = instructionData;                                                                 \
-	instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), a); \
-	ctx.assembler->binary.writeWord(instructionData.instruction); }                                      \
+#define INSTRUCTION_RRA(op, r0, r1, a, t) {                           \
+	kasm::InstructionData instructionData;                            \
+	instructionData.opcode = kasm::Opcode::##op;                      \
+	instructionData.register0 = r0;                                   \
+	instructionData.register1 = r1;                                   \
+	a.type = kasm::AddressType::##t;                                  \
+	a.position = ctx.assembler->binary.getLocation();                 \
+	a.instructionData = instructionData;                              \
+	ctx.assembler->resolveAddress(a);                                 \
+	ctx.assembler->binary.writeWord(a.instructionData.instruction); } \
 
 #define INSTRUCTION_RR(op, r0, r1) {                                \
 	kasm::InstructionData instructionData;                          \
@@ -80,14 +81,15 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 	instructionData.immediate = l;                                  \
 	ctx.assembler->binary.writeWord(instructionData.instruction); } \
 
-#define INSTRUCTION_RA(op, r0, a, t) {                                                                   \
-	kasm::InstructionData instructionData;                                                               \
-	instructionData.opcode = kasm::Opcode::##op;                                                         \
-	instructionData.register0 = r0;                                                                      \
-	a.type = kasm::AddressType::##t;                                                                     \
-	a.instructionData = instructionData;                                                                 \
-	instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), a); \
-	ctx.assembler->binary.writeWord(instructionData.instruction); }                                      \
+#define INSTRUCTION_RA(op, r0, a, t) {                                \
+	kasm::InstructionData instructionData;                            \
+	instructionData.opcode = kasm::Opcode::##op;                      \
+	instructionData.register0 = r0;                                   \
+	a.type = kasm::AddressType::##t;                                  \
+	a.position = ctx.assembler->binary.getLocation();                 \
+	a.instructionData = instructionData;                              \
+	ctx.assembler->resolveAddress(a);                                 \
+	ctx.assembler->binary.writeWord(a.instructionData.instruction); } \
 
 #define INSTRUCTION_R(op, r0) {                                     \
 	kasm::InstructionData instructionData;                          \
@@ -95,13 +97,14 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 	instructionData.register0 = r0;                                 \
 	ctx.assembler->binary.writeWord(instructionData.instruction); } \
 
-#define INSTRUCTION_A(op, a, t) {                                                                        \
-	kasm::InstructionData instructionData;                                                               \
-	instructionData.opcode = kasm::Opcode::##op;                                                         \
-	a.type = kasm::AddressType::##t;                                                                     \
-	a.instructionData = instructionData;                                                                 \
-	instructionData.instruction = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), a); \
-	ctx.assembler->binary.writeWord(instructionData.instruction); }                                      \
+#define INSTRUCTION_A(op, a, t) {                                     \
+	kasm::InstructionData instructionData;                            \
+	instructionData.opcode = kasm::Opcode::##op;                      \
+	a.type = kasm::AddressType::##t;                                  \
+	a.position = ctx.assembler->binary.getLocation();                 \
+	a.instructionData = instructionData;                              \
+	ctx.assembler->resolveAddress(a);                                 \
+	ctx.assembler->binary.writeWord(a.instructionData.instruction); } \
 
 #define INSTRUCTION_O(op) {                                         \
 	kasm::InstructionData instructionData;                          \
@@ -139,12 +142,12 @@ union SplitWord
 %token DIV DIVU J JAL JR LB LUI LW MFHI MFLO MULT MULTU OR ORI SB SLL SLLV NOR
 %token SLT SLTI SLTIU SLTU SRA SRL SRLV SUB SUBU SW SYS XOR XORI JALR
 
-%token MOV CLR B BAL BGT BLT BGE BLE BGTU BEGZ REM LI LA NOP NOT
+%token MOV CLR B BAL BGT BLT BGE BLE BGTU BEQZ REM LI LA NOP NOT
 
 %type<std::string> IDENTIFIER STRING
 %type<std::uint32_t> LITERAL REGISTER
-%type<std::vector<std::variant<std::uint32_t, kasm::Address>>> literal_list literal_argument
-%type<kasm::Address> address
+%type<std::vector<std::variant<std::uint32_t, kasm::AddressData>>> literal_list literal_argument
+%type<kasm::AddressData> address direct_address
 
 %start statement_list
 
@@ -165,28 +168,38 @@ statement
     | WORD literal_argument end_of_statement
     {
         ctx.assembler->binary.align(kasm::INSTRUCTION_SIZE);
-        for (std::variant<std::uint32_t, kasm::Address> word : $2)
+        for (std::variant<std::uint32_t, kasm::AddressData> word : $2)
 		{
-			if(std::holds_alternative<kasm::Address>(word))
+			if(std::holds_alternative<kasm::AddressData>(word))
 			{
-				kasm::Address addr = std::get<kasm::Address>(word);
+				kasm::AddressData addr = std::get<kasm::AddressData>(word);
 				addr.type = kasm::AddressType::DirectAddressAbsoluteWord;
-				word = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), addr);
+				addr.position = ctx.assembler->binary.getLocation();
+				ctx.assembler->resolveAddress(addr);
+            	ctx.assembler->binary.writeWord(addr.instructionData.instruction);
 			}
-            ctx.assembler->binary.writeWord(std::get<std::uint32_t>(word));
+			else
+			{
+            	ctx.assembler->binary.writeWord(std::get<std::uint32_t>(word));
+			}
         }
     }
     | BYTE literal_argument end_of_statement
     {
-        for (std::variant<std::uint32_t, kasm::Address> byte : $2)
+        for (std::variant<std::uint32_t, kasm::AddressData> byte : $2)
         {
-			if(std::holds_alternative<kasm::Address>(byte))
+			if(std::holds_alternative<kasm::AddressData>(byte))
 			{
-				kasm::Address addr = std::get<kasm::Address>(byte);
+				kasm::AddressData addr = std::get<kasm::AddressData>(byte);
 				addr.type = kasm::AddressType::DirectAddressAbsoluteByte;
-				byte = ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), addr);
+				addr.position = ctx.assembler->binary.getLocation();
+				ctx.assembler->resolveAddress(addr);
+            	ctx.assembler->binary.writeByte(static_cast<std::uint8_t>(addr.instructionData.instruction));
 			}
-            ctx.assembler->binary.writeByte(static_cast<std::uint8_t>(std::get<std::uint32_t>(byte)));
+			else
+			{
+            	ctx.assembler->binary.writeByte(static_cast<std::uint8_t>(std::get<std::uint32_t>(byte)));
+			}
         }
     }
     | ASCII STRING end_of_statement { ctx.assembler->binary.writeString($2.c_str(), $2.size()); }
@@ -203,74 +216,74 @@ statement
     | SPACE LITERAL end_of_statement { ctx.assembler->binary.pad($2); }
 
 	// Instructions
-    | ADD    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(ADD, $2, $4, $6); }
-	| ADDI   REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(ADDI, $2, $4, $6); }
-	| ADDIU  REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(ADDIU, $2, $4, $6); }
-	| ADDU   REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(ADDU, $2, $4, $6); }
-	| AND    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(AND, $2, $4, $6); }
-	| ANDI   REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(ANDI, $2, $4, $6); }
-    | BEQ    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRA(BEQ, $2, $4, $6, DirectAddressOffset); }
-	| BGEZ   REGISTER ',' address               end_of_statement { INSTRUCTION_RA(BGEZ, $2, $4, DirectAddressOffset); }
-	| BGEZAL REGISTER ',' address               end_of_statement { INSTRUCTION_RA(BGEZAL, $2, $4, DirectAddressOffset); }
-	| BGTZ   REGISTER ',' address               end_of_statement { INSTRUCTION_RA(BGTZ, $2, $4, DirectAddressOffset); }
-	| BLEZ   REGISTER ',' address               end_of_statement { INSTRUCTION_RA(BLEZ, $2, $4, DirectAddressOffset); }
-	| BLTZ   REGISTER ',' address               end_of_statement { INSTRUCTION_RA(BLTZ, $2, $4, DirectAddressOffset); }
-	| BLTZAL REGISTER ',' address               end_of_statement { INSTRUCTION_RA(BLTZAL, $2, $4, DirectAddressOffset); }
-	| BNE    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRA(BNE, $2, $4, $6, DirectAddressOffset); }
-	| DIV    REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RR(DIV, $2, $4); }
-	| DIVU   REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RR(DIVU, $2, $4); }
-	| J      address                            end_of_statement { INSTRUCTION_A(J, $2, DirectAddressAbsolute); }
-	| JAL    address                            end_of_statement { INSTRUCTION_A(JAL, $2, DirectAddressAbsolute); }
-	| JR     REGISTER                           end_of_statement { INSTRUCTION_R(JR, $2); }
-    | LB     REGISTER ',' address               end_of_statement { INSTRUCTION_RA(LB, $2, $4, IndirectAddressAbsolute); }
-	| LUI    REGISTER ',' LITERAL               end_of_statement { INSTRUCTION_RL(LUI, $2, $4); }
-	| LW     REGISTER ',' address               end_of_statement { INSTRUCTION_RA(LW, $2, $4, IndirectAddressAbsolute); }
-	| MFHI   REGISTER                           end_of_statement { INSTRUCTION_R(MFHI, $2); }
-	| MFLO   REGISTER                           end_of_statement { INSTRUCTION_R(MFLO, $2); }
-	| MULT   REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RR(MULT, $2, $4); }
-	| MULTU  REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RR(MULTU, $2, $4); }
-	| OR     REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(OR, $2, $4, $6); }
-	| ORI    REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(OR, $2, $4, $6); }
-	| SB     REGISTER ',' address               end_of_statement { INSTRUCTION_RA(SB, $2, $4, IndirectAddressAbsolute); }
-	| SLL    REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(SLL, $2, $4, $6); }
-	| SLLV   REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(SLLV, $2, $4, $6); }
-	| SLT    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(SLLV, $2, $4, $6); }
-	| SLTI   REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(SLTI, $2, $4, $6); }
-	| SLTIU  REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(SLTIU, $2, $4, $6); }
-	| SLTU   REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(SLTU, $2, $4, $6); }
-	| SRA    REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(SRA, $2, $4, $6); }
-	| SRL    REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(SRL, $2, $4, $6); }
-	| SRLV   REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(SRLV, $2, $4, $6); }
-	| SUB    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(SUB, $2, $4, $6); }
-	| SUBU   REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(SUBU, $2, $4, $6); }
-	| SW     REGISTER ',' address               end_of_statement { INSTRUCTION_RA(SB, $2, $4, IndirectAddressAbsolute); }
-	| SYS                                       end_of_statement { INSTRUCTION_O(SYS); }
-	| XOR    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(XOR, $2, $4, $6); }
-	| XORI   REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(XORI, $2, $4, $6); }
-	| JALR   REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RR(JALR, $2, $4); }
-	| NOR    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RRR(NOR, $2, $4, $6); }
+    | ADD    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(ADD, $2, $4, $6); }
+	| ADDI   REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(ADDI, $2, $4, $6); }
+	| ADDIU  REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(ADDIU, $2, $4, $6); }
+	| ADDU   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(ADDU, $2, $4, $6); }
+	| AND    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(AND, $2, $4, $6); }
+	| ANDI   REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(ANDI, $2, $4, $6); }
+    | BEQ    REGISTER ',' REGISTER ',' direct_address end_of_statement { INSTRUCTION_RRA(BEQ, $2, $4, $6, DirectAddressOffset); }
+	| BGEZ   REGISTER ',' direct_address              end_of_statement { INSTRUCTION_RA(BGEZ, $2, $4, DirectAddressOffset); }
+	| BGEZAL REGISTER ',' direct_address              end_of_statement { INSTRUCTION_RA(BGEZAL, $2, $4, DirectAddressOffset); }
+	| BGTZ   REGISTER ',' direct_address              end_of_statement { INSTRUCTION_RA(BGTZ, $2, $4, DirectAddressOffset); }
+	| BLEZ   REGISTER ',' direct_address              end_of_statement { INSTRUCTION_RA(BLEZ, $2, $4, DirectAddressOffset); }
+	| BLTZ   REGISTER ',' direct_address              end_of_statement { INSTRUCTION_RA(BLTZ, $2, $4, DirectAddressOffset); }
+	| BLTZAL REGISTER ',' direct_address              end_of_statement { INSTRUCTION_RA(BLTZAL, $2, $4, DirectAddressOffset); }
+	| BNE    REGISTER ',' REGISTER ',' direct_address end_of_statement { INSTRUCTION_RRA(BNE, $2, $4, $6, DirectAddressOffset); }
+	| DIV    REGISTER ',' REGISTER                    end_of_statement { INSTRUCTION_RR(DIV, $2, $4); }
+	| DIVU   REGISTER ',' REGISTER                    end_of_statement { INSTRUCTION_RR(DIVU, $2, $4); }
+	| J      address                                  end_of_statement { INSTRUCTION_A(J, $2, DirectAddressAbsolute); }
+	| JAL    address                                  end_of_statement { INSTRUCTION_A(JAL, $2, DirectAddressAbsolute); }
+	| JR     REGISTER                                 end_of_statement { INSTRUCTION_R(JR, $2); }
+    | LB     REGISTER ',' address                     end_of_statement { INSTRUCTION_RA(LB, $2, $4, IndirectAddressOffset); }
+	| LUI    REGISTER ',' LITERAL                     end_of_statement { INSTRUCTION_RL(LUI, $2, $4); }
+	| LW     REGISTER ',' address                     end_of_statement { INSTRUCTION_RA(LW, $2, $4, IndirectAddressOffset); }
+	| MFHI   REGISTER                                 end_of_statement { INSTRUCTION_R(MFHI, $2); }
+	| MFLO   REGISTER                                 end_of_statement { INSTRUCTION_R(MFLO, $2); }
+	| MULT   REGISTER ',' REGISTER                    end_of_statement { INSTRUCTION_RR(MULT, $2, $4); }
+	| MULTU  REGISTER ',' REGISTER                    end_of_statement { INSTRUCTION_RR(MULTU, $2, $4); }
+	| OR     REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(OR, $2, $4, $6); }
+	| ORI    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(OR, $2, $4, $6); }
+	| SB     REGISTER ',' address                     end_of_statement { INSTRUCTION_RA(SB, $2, $4, IndirectAddressOffset); }
+	| SLL    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(SLL, $2, $4, $6); }
+	| SLLV   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(SLLV, $2, $4, $6); }
+	| SLT    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(SLLV, $2, $4, $6); }
+	| SLTI   REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(SLTI, $2, $4, $6); }
+	| SLTIU  REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(SLTIU, $2, $4, $6); }
+	| SLTU   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(SLTU, $2, $4, $6); }
+	| SRA    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(SRA, $2, $4, $6); }
+	| SRL    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(SRL, $2, $4, $6); }
+	| SRLV   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(SRLV, $2, $4, $6); }
+	| SUB    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(SUB, $2, $4, $6); }
+	| SUBU   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(SUBU, $2, $4, $6); }
+	| SW     REGISTER ',' address                     end_of_statement { INSTRUCTION_RA(SB, $2, $4, IndirectAddressOffset); }
+	| SYS                                             end_of_statement { INSTRUCTION_O(SYS); }
+	| XOR    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(XOR, $2, $4, $6); }
+	| XORI   REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(XORI, $2, $4, $6); }
+	| JALR   REGISTER ',' REGISTER                    end_of_statement { INSTRUCTION_RR(JALR, $2, $4); }
+	| NOR    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(NOR, $2, $4, $6); }
 
 	// Pseudoinstructions
-	| MOV    REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RRL(OR, $2, $4, kasm::ZERO); }
-	| CLR    REGISTER                           end_of_statement { INSTRUCTION_RRL(OR, $2, kasm::ZERO, kasm::ZERO); }
-	| ADD    REGISTER ',' REGISTER ',' LITERAL  end_of_statement { INSTRUCTION_RRL(ADDI, $2, $4, $6); }
-	| JALR   REGISTER                           end_of_statement { INSTRUCTION_RR(JALR, $2, kasm::RA); }
-	| NOP                                       end_of_statement { INSTRUCTION_RRL(SLL, kasm::ZERO, kasm::ZERO, 0); }
-	| B      address                            end_of_statement { INSTRUCTION_RRA(BEQ, kasm::ZERO, kasm::ZERO, $2, DirectAddressOffset); }
-	| BAL    address                            end_of_statement { INSTRUCTION_RA(BGEZAL, kasm::ZERO, $2, DirectAddressOffset); }
-	| BGT    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $4, $2); INSTRUCTION_RRA(BNE, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
-	| BLT    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $2, $4); INSTRUCTION_RRA(BNE, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
-	| BGE    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $2, $4); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
-	| BLE    REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $4, $2); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
-	| BGTU   REGISTER ',' REGISTER ',' address  end_of_statement { INSTRUCTION_RRR(SLTU, kasm::AT, $2, $4); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
-	| B      REGISTER ',' address               end_of_statement { INSTRUCTION_RRA(BEQ, $2, kasm::ZERO, $4, DirectAddressOffset); }
-	| BEQ    REGISTER ',' LITERAL  ',' address  end_of_statement { INSTRUCTION_RRL(ORI, kasm::AT, kasm::ZERO, $4); INSTRUCTION_RRA(BEQ, $2, kasm::AT, $6, DirectAddressOffset); }
-	| BNE    REGISTER ',' LITERAL  ',' address  end_of_statement { INSTRUCTION_RRL(ORI, kasm::AT, kasm::ZERO, $4); INSTRUCTION_RRA(BNE, $2, kasm::AT, $6, DirectAddressOffset); }
-	| MULT   REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RR(MULT, $4, $6); INSTRUCTION_R(MFLO, $2); }
-	| DIV    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RR(DIV, $4, $6); INSTRUCTION_R(MFLO, $2); }
-	| REM    REGISTER ',' REGISTER ',' REGISTER end_of_statement { INSTRUCTION_RR(DIV, $4, $6); INSTRUCTION_R(MFHI, $2); }
-	| NOT    REGISTER ',' REGISTER              end_of_statement { INSTRUCTION_RRR(NOR, $2, $4, kasm::ZERO); }
-	| LI     REGISTER ',' LITERAL               end_of_statement
+	| MOV    REGISTER ',' REGISTER                    end_of_statement { INSTRUCTION_RRL(OR, $2, $4, kasm::ZERO); }
+	| CLR    REGISTER                                 end_of_statement { INSTRUCTION_RRL(OR, $2, kasm::ZERO, kasm::ZERO); }
+	| ADD    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(ADDI, $2, $4, $6); }
+	| JALR   REGISTER                                 end_of_statement { INSTRUCTION_RR(JALR, $2, kasm::RA); }
+	| NOP                                             end_of_statement { INSTRUCTION_RRL(SLL, kasm::ZERO, kasm::ZERO, 0); }
+	| B      direct_address                           end_of_statement { INSTRUCTION_RRA(BEQ, kasm::ZERO, kasm::ZERO, $2, DirectAddressOffset); }
+	| BAL    direct_address                           end_of_statement { INSTRUCTION_RA(BGEZAL, kasm::ZERO, $2, DirectAddressOffset); }
+	| BGT    REGISTER ',' REGISTER ',' direct_address end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $4, $2); INSTRUCTION_RRA(BNE, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
+	| BLT    REGISTER ',' REGISTER ',' direct_address end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $2, $4); INSTRUCTION_RRA(BNE, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
+	| BGE    REGISTER ',' REGISTER ',' direct_address end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $2, $4); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
+	| BLE    REGISTER ',' REGISTER ',' direct_address end_of_statement { INSTRUCTION_RRR(SLT, kasm::AT, $4, $2); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
+	| BGTU   REGISTER ',' REGISTER ',' direct_address end_of_statement { INSTRUCTION_RRR(SLTU, kasm::AT, $2, $4); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
+	| BEQZ      REGISTER ',' direct_address           end_of_statement { INSTRUCTION_RRA(BEQ, $2, kasm::ZERO, $4, DirectAddressOffset); }
+	| BEQ    REGISTER ',' LITERAL  ',' direct_address end_of_statement { INSTRUCTION_RRL(ORI, kasm::AT, kasm::ZERO, $4); INSTRUCTION_RRA(BEQ, $2, kasm::AT, $6, DirectAddressOffset); }
+	| BNE    REGISTER ',' LITERAL  ',' direct_address end_of_statement { INSTRUCTION_RRL(ORI, kasm::AT, kasm::ZERO, $4); INSTRUCTION_RRA(BNE, $2, kasm::AT, $6, DirectAddressOffset); }
+	| MULT   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RR(MULT, $4, $6); INSTRUCTION_R(MFLO, $2); }
+	| DIV    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RR(DIV, $4, $6); INSTRUCTION_R(MFLO, $2); }
+	| REM    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RR(DIV, $4, $6); INSTRUCTION_R(MFHI, $2); }
+	| NOT    REGISTER ',' REGISTER                    end_of_statement { INSTRUCTION_RRR(NOR, $2, $4, kasm::ZERO); }
+	| LI     REGISTER ',' LITERAL                     end_of_statement
 	{
 		SplitWord l = {$4};
 		
@@ -284,82 +297,72 @@ statement
 			INSTRUCTION_RRL(ORI, $2, kasm::ZERO, l.lo);
 		}
 	}
-	| LA     REGISTER ',' address               end_of_statement
+	| LA     REGISTER ',' direct_address              end_of_statement
 	{
 		$4.type = kasm::AddressType::DirectAddressAbsoluteLoad;
 		$4.reg = $2;
-		$4.instructionData.instruction = 0;
-		SplitWord l = { ctx.assembler->resolveAddress(ctx.assembler->binary.getLocation(), $4) };
-		if (l.value)
-		{
-			INSTRUCTION_RL(LUI, $2, l.hi);
-			INSTRUCTION_RRL(ORI, $2, $2, l.lo);
-		}
-		else
-		{
-			ctx.assembler->binary.pad(kasm::INSTRUCTION_SIZE * 2);
-		}
+		$4.position = ctx.assembler->binary.getLocation();
+		ctx.assembler->resolveAddress($4);
+		SplitWord l = { $4.instructionData.instruction };
+		INSTRUCTION_RL(LUI, $2, l.hi);
+		INSTRUCTION_RRL(ORI, $2, $2, l.lo);
 	}
     ;
 
 literal_argument
 	: literal_list                       { $$ = $1; }
-	| LITERAL ':' LITERAL                { $$ = std::vector<std::variant<std::uint32_t, kasm::Address>>($3, $1); }
-	| IDENTIFIER ':' LITERAL             { $$ = std::vector<std::variant<std::uint32_t, kasm::Address>>($3, kasm::Address{kasm::AddressType::Invalid, $1}); }
-	| IDENTIFIER '+' LITERAL ':' LITERAL { $$ = std::vector<std::variant<std::uint32_t, kasm::Address>>($5, kasm::Address{kasm::AddressType::Invalid, $1, $3}); }
+	| LITERAL ':' LITERAL                { $$ = std::vector<std::variant<std::uint32_t, kasm::AddressData>>($3, $1); }
+	| IDENTIFIER ':' LITERAL             { $$ = std::vector<std::variant<std::uint32_t, kasm::AddressData>>($3, kasm::AddressData($1)); }
 	;
 
 literal_list
     : LITERAL                                 { $$ = {$1}; }
+	| IDENTIFIER                              { $$ = {$1}; }
     | literal_list ',' LITERAL                { $1.push_back($3); $$ = $1; }
-	| literal_list ',' IDENTIFIER             { $1.push_back(kasm::Address{kasm::AddressType::Invalid, $3}); $$ = $1; }
-	| literal_list ',' IDENTIFIER '+' LITERAL { $1.push_back(kasm::Address{kasm::AddressType::Invalid, $3, $5}); $$ = $1; }
+	| literal_list ',' IDENTIFIER             { $1.push_back(kasm::AddressData($3)); $$ = $1; }
     ;
 
-address
-    : IDENTIFIER
+direct_address
+	: IDENTIFIER
 	{
-		kasm::Address addr = {};
+		kasm::AddressData addr;
 		addr.label = $1;
 		$$ = addr;
 	}
+	;
+
+address
+	: direct_address { $$ = $1; } 
     | IDENTIFIER '+' LITERAL
 	{
-		kasm::Address addr = {};
+		kasm::AddressData addr;
 		addr.label = $1;
 		addr.offset = $3;
 		$$ = addr;
 	}
     | '(' REGISTER ')'
 	{
-		kasm::Address addr = {};
+		kasm::AddressData addr;
 		addr.reg = $2;
 		$$ = addr;
 	}
     | LITERAL '(' REGISTER ')'
 	{
-		kasm::Address addr = {};
+		kasm::AddressData addr;
 		addr.offset = $1;
 		addr.reg = $3;
 		$$ = addr;
 	}
     | IDENTIFIER '(' REGISTER ')'
 	{
-		kasm::Address addr = {};
+		kasm::AddressData addr;
 		addr.label = $1;
 		addr.reg = $3;
 		$$ = addr;
 	}
-    | LITERAL '+' LITERAL '(' REGISTER ')'
-	{
-		kasm::Address addr = {};
-		addr.offset = $1 + $3;
-		addr.reg = $5;
-		$$ = addr;
-	}
     | IDENTIFIER '+' LITERAL '(' REGISTER ')'
 	{
-		kasm::Address addr = {};
+		kasm::AddressData addr;
 		addr.label = $1;
 		addr.offset = $3;
 		addr.reg = $5;
@@ -479,7 +482,7 @@ init:
 	"bge"|"BGE"         { token(BGE); }
 	"ble"|"BLE"         { token(BLE); }
 	"bgtu"|"BGTU"       { token(BGTU); }
-	"begz"|"BEGZ"       { token(BEGZ); }
+	"BEQZ"|"BEQZ"       { token(BEQZ); }
 	"rem"|"REM"         { token(REM); }
 	"li"|"LI"           { token(LI); }
 	"la"|"LA"           { token(LA); }
@@ -547,29 +550,25 @@ namespace kasm
         yy::parser parser(ctx);
         parser.parse();
 
-        for (UnresolvedAddressLocation unresolvedAddressLocation : unresolvedAddressLocations)
+        for (AddressData unresolvedAddressLocation : unresolvedAddressLocations)
         {
-			binary.setLocation(unresolvedAddressLocation.location);
-			std::uint32_t instruction = unresolvedAddressLocation.address.instructionData.instruction;
+			binary.setLocation(unresolvedAddressLocation.position);
+			
+			resolveAddress(unresolvedAddressLocation, MUST_RESOLVE);
 
-			instruction = resolveAddress(MUST_RESOLVE, unresolvedAddressLocation.address);
-
-			if (unresolvedAddressLocation.address.type == AddressType::DirectAddressAbsoluteByte)
+			if (unresolvedAddressLocation.type == AddressType::DirectAddressAbsoluteByte)
 			{
-				std::cout << "Label Resolved: " << unresolvedAddressLocation.address.label << " to " << instruction << std::endl;
-				binary.writeByte(static_cast<std::uint8_t>(instruction));
+				binary.writeByte(static_cast<std::uint8_t>(unresolvedAddressLocation.instructionData.instruction));
 			}
-			else if (unresolvedAddressLocation.address.type == AddressType::DirectAddressAbsoluteLoad)
+			else if (unresolvedAddressLocation.type == AddressType::DirectAddressAbsoluteLoad)
 			{
-				std::cout << "Label Resolved: " << unresolvedAddressLocation.address.label << " to " << instruction << std::endl;
-				SplitWord l = { instruction };
-				INSTRUCTION_RL(LUI, unresolvedAddressLocation.address.reg, l.hi);
-				INSTRUCTION_RRL(ORI, unresolvedAddressLocation.address.reg, unresolvedAddressLocation.address.reg, l.lo);
+				SplitWord l = { unresolvedAddressLocation.instructionData.instruction };
+				INSTRUCTION_RL(LUI, unresolvedAddressLocation.reg, l.hi);
+				INSTRUCTION_RRL(ORI, unresolvedAddressLocation.reg, unresolvedAddressLocation.reg, l.lo);
 			}
 			else
 			{
-				std::cout << "Label Resolved: " << unresolvedAddressLocation.address.label << "+" << unresolvedAddressLocation.address.offset << "(" << unresolvedAddressLocation.address.reg << ") @ " << (instruction & 0xFFFF) << std::endl;
-				binary.writeWord(instruction);
+				binary.writeWord(unresolvedAddressLocation.instructionData.instruction);
 			}
         }
 
@@ -578,57 +577,59 @@ namespace kasm
 		binary.close();
     }
 
-    std::uint32_t Assembler::resolveAddress(std::uint32_t instructionLocation, Address address)
+    bool Assembler::resolveAddress(AddressData& address, bool mustResolve)
     {
-		if (address.label == "")
+		switch (address.type)
 		{
-			switch (address.type)
+		case AddressType::DirectAddressAbsolute:
+			if (labelLocations.count(address.label))
 			{
-			case AddressType::DirectAddressAbsolute:
-				address.instructionData.directAddressAbsolute = address.offset;
-				return address.instructionData.instruction;
-			case AddressType::IndirectAddressAbsolute:
-				address.instructionData.register1 = address.reg;
-				address.instructionData.directAddressOffset = address.offset;
-				return address.instructionData.instruction;
-			case AddressType::DirectAddressOffset:
-				address.instructionData.directAddressOffset = address.offset;
-				return address.instructionData.instruction;
-			default:
-				break;
+				address.instructionData.directAddressAbsolute = labelLocations.at(address.label);
+				return true;
 			}
-		}
-		else if (labelLocations.count(address.label))
-        {
-			switch (address.type)
+			break;
+		case AddressType::DirectAddressOffset:
+			if (labelLocations.count(address.label))
 			{
-			case AddressType::DirectAddressAbsolute:
-				address.instructionData.directAddressAbsolute = labelLocations.at(address.label) + address.offset;
-				return address.instructionData.instruction;
-			case AddressType::IndirectAddressAbsolute:
-				address.instructionData.register1 = address.reg;
-				address.instructionData.directAddressOffset = labelLocations.at(address.label) + address.offset;
-				return address.instructionData.instruction;
-			case AddressType::DirectAddressOffset:
-				address.instructionData.directAddressOffset = labelLocations.at(address.label) + address.offset;
-				return address.instructionData.instruction;
-			case AddressType::DirectAddressAbsoluteWord:
-			case AddressType::DirectAddressAbsoluteByte:
-			case AddressType::DirectAddressAbsoluteLoad:
-				return labelLocations.at(address.label) + address.offset;
-			default:
-				break;
+				address.instructionData.directAddressOffset = static_cast<std::int32_t>(labelLocations.at(address.label)) - address.position;
+				return true;
 			}
-		}
-		else if (instructionLocation == MUST_RESOLVE)
-		{
-                throw std::exception(std::string("Unresolved Label: " + address.label).c_str());
+			break;
+		case AddressType::IndirectAddressOffset:
+			if (address.label.empty())
+			{
+				address.instructionData.register1 = address.reg;
+				address.instructionData.directAddressOffset = static_cast<std::int32_t>(address.offset) - address.position;
+				return true;
+			}
+			else if (labelLocations.count(address.label))
+			{
+				address.instructionData.register1 = address.reg;
+				address.instructionData.directAddressOffset = static_cast<std::int32_t>(labelLocations.at(address.label)) + address.offset - address.position;
+				return true;
+			}
+			break;
+		case AddressType::DirectAddressAbsoluteWord:
+		case AddressType::DirectAddressAbsoluteByte:
+		case AddressType::DirectAddressAbsoluteLoad:
+			if (labelLocations.count(address.label))
+			{
+				address.instructionData.instruction = labelLocations.at(address.label);
+				return true;
+			}
+			break;
+		default:
+			break;
 		}
 
+		if (mustResolve)
+		{
+            throw std::exception(std::string("Unresolved Label: " + address.label).c_str());
+		}
 
-		std::cout << "Label Unresolved: " << address.label << "+" << address.offset << "(" << address.reg << ") @ " << instructionLocation << std::endl;
-        unresolvedAddressLocations.push_back({ instructionLocation, address });
-        return address.instructionData.instruction;
+        unresolvedAddressLocations.push_back(address);
+
+		return false;
     }
 
 	void Assembler::defineLabel(const std::string& name, std::uint32_t location)
@@ -637,10 +638,7 @@ namespace kasm
 		{
             throw std::exception(std::string("Redefined Label: " + name).c_str());
 		}
-		else
-		{
-			std::cout << "Label Defined: " << name << " @ " << location << std::endl;
-			labelLocations[name] = location;
-		}
+
+		labelLocations[name] = location;
 	}
 }

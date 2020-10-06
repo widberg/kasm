@@ -23,7 +23,7 @@ namespace kasm
         exitCode = 0;
 
         std::uint8_t* stack = new std::uint8_t[144];
-        registers[SP] = registers[FP] = reinterpret_cast<std::uint32_t>(stack + 144 - 1);
+        registers[SP] = reinterpret_cast<std::uint32_t>(stack + 144 - 1);
 
         while (pc < program.size() && !shouldExit)
         {
@@ -119,7 +119,7 @@ namespace kasm
                 pc = registers[d.register0];
                 break;
             case LB:
-                registers[d.register0] = program[resolveAddress(d, AddressType::IndirectAddressAbsolute)];
+                registers[d.register0] = program[resolveAddress(d, AddressType::IndirectAddressOffset)];
                 advancePc();
                 break;
             case LUI:
@@ -127,7 +127,7 @@ namespace kasm
                 advancePc();
                 break;
             case LW:
-                registers[d.register0] = *reinterpret_cast<std::uint32_t*>(program.data() + resolveAddress(d, AddressType::IndirectAddressAbsolute));
+                registers[d.register0] = *reinterpret_cast<std::uint32_t*>(program.data() + resolveAddress(d, AddressType::IndirectAddressOffset));
                 advancePc();
                 break;
             case MFHI:
@@ -163,7 +163,7 @@ namespace kasm
                 advancePc();
                 break;
             case SB:
-                program[resolveAddress(d, AddressType::IndirectAddressAbsolute)] = registers[d.register0];
+                program[resolveAddress(d, AddressType::IndirectAddressOffset)] = registers[d.register0];
                 advancePc();
                 break;
             case SLL:
@@ -211,7 +211,7 @@ namespace kasm
                 advancePc();
                 break;
             case SW:
-                *reinterpret_cast<std::uint32_t*>(program.data() + resolveAddress(d, AddressType::IndirectAddressAbsolute)) = registers[d.register0];
+                *reinterpret_cast<std::uint32_t*>(program.data() + resolveAddress(d, AddressType::IndirectAddressOffset)) = registers[d.register0];
                 advancePc();
                 break;
             case SYS:
@@ -338,8 +338,8 @@ namespace kasm
             return instructionData.directAddressAbsolute;
         case kasm::AddressType::DirectAddressOffset:
             return instructionData.directAddressOffset + pc;
-        case kasm::AddressType::IndirectAddressAbsolute:
-            return registers[instructionData.register1] + instructionData.directAddressOffset;
+        case kasm::AddressType::IndirectAddressOffset:
+            return registers[instructionData.register1] + instructionData.directAddressOffset + pc;
         default:
             break;
         }
