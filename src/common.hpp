@@ -152,4 +152,12 @@ namespace kasm
         std::int32_t offset = 0;
         std::uint32_t reg = 0;
     };
+
+    struct ProgramHeader
+    {
+        std::uint32_t textSegmentBegin;
+        std::uint32_t textSegmentLength;
+        std::uint32_t dataSegmentBegin;
+        std::uint32_t dataSegmentLength;
+    };
 }

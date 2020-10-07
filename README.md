@@ -30,11 +30,11 @@ cmake --build .
 
 ### Tools
 
-* kasm - Assembler
-* kdsm - Disassembler
-* kvm - Virtual Machine
-* kdbg - Debugger
-* klang - K Structured Programming Language Compiler
+* kasm - Assembler 🟩
+* kdsm - Disassembler ✅
+* kvm - Virtual Machine ✅
+* kdbg - Debugger ⬜
+* klang - K Structured Programming Language Compiler ⬜
 
 ### Instruction Encoding
 

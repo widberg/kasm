@@ -243,11 +243,11 @@ statement
 	| MULT   REGISTER ',' REGISTER                    end_of_statement { INSTRUCTION_RR(MULT, $2, $4); }
 	| MULTU  REGISTER ',' REGISTER                    end_of_statement { INSTRUCTION_RR(MULTU, $2, $4); }
 	| OR     REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(OR, $2, $4, $6); }
-	| ORI    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(OR, $2, $4, $6); }
+	| ORI    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(ORI, $2, $4, $6); }
 	| SB     REGISTER ',' address                     end_of_statement { INSTRUCTION_RA(SB, $2, $4, IndirectAddressOffset); }
 	| SLL    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(SLL, $2, $4, $6); }
 	| SLLV   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(SLLV, $2, $4, $6); }
-	| SLT    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(SLLV, $2, $4, $6); }
+	| SLT    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(SLT, $2, $4, $6); }
 	| SLTI   REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(SLTI, $2, $4, $6); }
 	| SLTIU  REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(SLTIU, $2, $4, $6); }
 	| SLTU   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(SLTU, $2, $4, $6); }
@@ -310,16 +310,16 @@ statement
     ;
 
 literal_argument
-	: literal_list                       { $$ = $1; }
-	| LITERAL ':' LITERAL                { $$ = std::vector<std::variant<std::uint32_t, kasm::AddressData>>($3, $1); }
-	| IDENTIFIER ':' LITERAL             { $$ = std::vector<std::variant<std::uint32_t, kasm::AddressData>>($3, kasm::AddressData($1)); }
+	: literal_list           { $$ = $1; }
+	| LITERAL ':' LITERAL    { $$ = std::vector<std::variant<std::uint32_t, kasm::AddressData>>($3, $1); }
+	| IDENTIFIER ':' LITERAL { $$ = std::vector<std::variant<std::uint32_t, kasm::AddressData>>($3, kasm::AddressData($1)); }
 	;
 
 literal_list
-    : LITERAL                                 { $$ = {$1}; }
-	| IDENTIFIER                              { $$ = {$1}; }
-    | literal_list ',' LITERAL                { $1.push_back($3); $$ = $1; }
-	| literal_list ',' IDENTIFIER             { $1.push_back(kasm::AddressData($3)); $$ = $1; }
+    : LITERAL                     { $$ = {$1}; }
+	| IDENTIFIER                  { $$ = {$1}; }
+    | literal_list ',' LITERAL    { $1.push_back($3); $$ = $1; }
+	| literal_list ',' IDENTIFIER { $1.push_back(kasm::AddressData($3)); $$ = $1; }
     ;
 
 direct_address
@@ -377,24 +377,52 @@ end_of_statement
 
 %%
 
-std::uint32_t resolveRegisterName(const std::string& registerName)
-{
-	const static std::unordered_map<std::string, kasm::Register> REGISTER_NAMES = {
-		{ "zero", kasm::ZERO },
-		{ "at", kasm::AT },
-		{ "v0", kasm::V0 }, { "v1", kasm::V1 },
-		{ "a0", kasm::A0 }, { "a1", kasm::A1 }, { "a2", kasm::A2 }, { "a3", kasm::A3 },
-		{ "t0", kasm::T0 }, { "t1", kasm::T1 }, { "t2", kasm::T2 }, { "t3", kasm::T3 }, { "t4", kasm::T4 }, { "t5", kasm::T5 }, { "t6", kasm::T6 }, { "t7", kasm::T7 },
-		{ "s0", kasm::S0 }, { "s1", kasm::S1 }, { "s2", kasm::S2 }, { "s3", kasm::S3 }, { "s4", kasm::S4 }, { "s5", kasm::S5 }, { "s6", kasm::S6 }, { "s7", kasm::S7 },
-		{ "t8", kasm::T8 }, { "t9", kasm::T9 },
-		{ "k0", kasm::K0 }, { "k1", kasm::K1 },
-		{ "gp", kasm::GP },
-		{ "sp", kasm::SP },
-		{ "fp", kasm::FP },
-		{ "ra", kasm::RA }
-	};
+const static std::unordered_map<std::string, kasm::Register> REGISTER_NAMES = {
+	{ "zero", kasm::ZERO },
+	{ "at", kasm::AT },
+	{ "v0", kasm::V0 }, { "v1", kasm::V1 },
+	{ "a0", kasm::A0 }, { "a1", kasm::A1 }, { "a2", kasm::A2 }, { "a3", kasm::A3 },
+	{ "t0", kasm::T0 }, { "t1", kasm::T1 }, { "t2", kasm::T2 }, { "t3", kasm::T3 }, { "t4", kasm::T4 }, { "t5", kasm::T5 }, { "t6", kasm::T6 }, { "t7", kasm::T7 },
+	{ "s0", kasm::S0 }, { "s1", kasm::S1 }, { "s2", kasm::S2 }, { "s3", kasm::S3 }, { "s4", kasm::S4 }, { "s5", kasm::S5 }, { "s6", kasm::S6 }, { "s7", kasm::S7 },
+	{ "t8", kasm::T8 }, { "t9", kasm::T9 },
+	{ "k0", kasm::K0 }, { "k1", kasm::K1 },
+	{ "gp", kasm::GP },
+	{ "sp", kasm::SP },
+	{ "fp", kasm::FP },
+	{ "ra", kasm::RA },
+};
 
-	return REGISTER_NAMES.at(registerName);
+const static std::unordered_map<char, char> ESCAPE_SEQUENCES = {
+	{ 'a', '\a' },
+	{ 'b', '\b' },
+	{ 'f', '\f' },
+	{ 'n', '\n' },
+	{ 'r', '\r' },
+	{ 't', '\t' },
+	{ 'v', '\v' },
+	{ '\\', '\\' },
+	{ '\'', '\'' },
+	{ '\"', '\"' },
+};
+
+std::string lexStringLiteral(lexcontext& ctx)
+{
+	std::string str;
+
+	%{ /* Begin re2c lexer */
+    re2c:yyfill:enable = 0;
+    re2c:define:YYCTYPE = "char";
+    re2c:define:YYCURSOR = "ctx.cursor";
+	%}
+init:
+	%{
+	"\n" { throw std::exception(std::string("Unclosed string: " + ctx.loc.begin.line).c_str()); }
+
+	"\\"([abfnrtv]|"\\"|"\'"|"\"") { str.push_back(ESCAPE_SEQUENCES.at(ctx.cursor[-1] & 0xFF)); goto init; }
+
+	"\"" { return str; }
+	* { str.push_back(ctx.cursor[-1] & 0xFF); goto init; }
+	%}
 }
 
 yy::parser::symbol_type yy::yylex(lexcontext& ctx)
@@ -493,26 +521,27 @@ init:
 	[a-zA-Z_][a-zA-Z_0-9]* { tokenv(IDENTIFIER, std::string(anchor, ctx.cursor)); }
 
 	// Register
-	"$"("zero"|"at"|"gp"|"sp"|"fp"|"ra"|"a"[0-3]|"v"[0-1]|"t"[0-9]|"s"[0-7]|"k"[0-1]) { tokenv(REGISTER, resolveRegisterName(std::string(anchor + 1, ctx.cursor))); }
+	"$"("zero"|"at"|"gp"|"sp"|"fp"|"ra"|"a"[0-3]|"v"[0-1]|"t"[0-9]|"s"[0-7]|"k"[0-1]) { tokenv(REGISTER, REGISTER_NAMES.at(std::string(anchor + 1, ctx.cursor))); }
 	"$"([0-9]|[1-2][0-9]|"3"[0-1]) { tokenv(REGISTER, std::stoi(std::string(anchor + 1, ctx.cursor))); }
 
 	// Literals
 	[-+]?[0-9]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor))); }
-	"0b"[01]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor))); }
-	"0x"[0-9a-fA-F]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor))); }
-	"'"(.|[\\].)"'"                  { tokenv(LITERAL, anchor[1]); }
+	"0b"[01]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor), nullptr, 2)); }
+	"0x"[0-9a-fA-F]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor), nullptr, 16)); }
+	"'\\"."'"                { tokenv(LITERAL, ESCAPE_SEQUENCES.at(anchor[1])); }
+	"'"."'"                  { tokenv(LITERAL, anchor[1]); }
 
 	// String
-	"\""[^"]*"\""               { tokenv(STRING, std::string(anchor + 1, ctx.cursor - 1)); }
+	"\""               { tokenv(STRING, lexStringLiteral(ctx)); }
 
 	// Whitespace
 	"\r\n"|[\r\n]{ ctx.loc.lines(); ctx.loc.step(); token(END_OF_LINE); }
 	[\t\v\b\f ] { ctx.loc.columns(); advance(); }
-	end { token(END_OF_FILE); }
 
 	// Comment
 	"#"[^\r\n]* { walk(); advance(); }
 
+	end { token(END_OF_FILE); }
 	// Single character operators
 	* { walk(); return parser::symbol_type(parser::token_type(ctx.cursor[-1] & 0xFF), ctx.loc); }
 	%}

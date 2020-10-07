@@ -15,12 +15,12 @@ ask:
 	sys
 
 	# no
-	beq $a0, 78, skip
-	beq $a0, 110, skip
+	beq $a0, 'n', skip
+	beq $a0, 'N', skip
 	
 	# yes
-	beq $a0, 89, yes
-	beq $a0, 121, yes
+	beq $a0, 'y', yes
+	beq $a0, 'Y', yes
 
 	# invalid
 	j ask
@@ -63,7 +63,7 @@ ret:
 	.space 4   # reserve 1 word of space in memory
 
 msg:
-	.space 32
+	.byte ' ':32
 
 bruh:
 	.asciiz "bruh"

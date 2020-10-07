@@ -20,6 +20,7 @@ int main()
 		//assembler.assemble("source_asm.kasm", "program.kexe");
 		assembler.assemble("source.kasm", "program.kexe");
 		disassembler.disassemble("program.kexe", "d_source.kasm");
+		assembler.assemble("d_source.kasm", "program.kexe");
 		virtualMachine.loadProgram("program.kexe");
 		exitCode = virtualMachine.execute();
 	}
