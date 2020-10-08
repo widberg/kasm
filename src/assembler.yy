@@ -33,7 +33,13 @@ struct lexcontext;
 {
 struct lexcontext
 {
-	const char* cursor;
+	lexcontext(std::string fileName)
+		: in(fileName, std::ios::binary | std::ios::ate)
+	{
+		endOfStream = in.tellg(); in.seekg(0, std::ios::beg);
+	};
+	std::ifstream in;
+	std::streampos endOfStream;
 	yy::location loc;
     kasm::Assembler* assembler;
 };
@@ -142,7 +148,7 @@ union SplitWord
 %token DIV DIVU J JAL JR LB LUI LW MFHI MFLO MULT MULTU OR ORI SB SLL SLLV NOR
 %token SLT SLTI SLTIU SLTU SRA SRL SRLV SUB SUBU SW SYS XOR XORI JALR
 
-%token MOV CLR B BAL BGT BLT BGE BLE BGTU BEQZ REM LI LA NOP NOT
+%token COPY CLR B BAL BGT BLT BGE BLE BGTU BEQZ REM LI LA NOP NOT
 
 %type<std::string> IDENTIFIER STRING
 %type<std::uint32_t> LITERAL REGISTER
@@ -264,7 +270,7 @@ statement
 	| NOR    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { INSTRUCTION_RRR(NOR, $2, $4, $6); }
 
 	// Pseudoinstructions
-	| MOV    REGISTER ',' REGISTER                    end_of_statement { INSTRUCTION_RRL(OR, $2, $4, kasm::ZERO); }
+	| COPY    REGISTER ',' REGISTER                   end_of_statement { INSTRUCTION_RRL(OR, $2, $4, kasm::ZERO); }
 	| CLR    REGISTER                                 end_of_statement { INSTRUCTION_RRL(OR, $2, kasm::ZERO, kasm::ZERO); }
 	| ADD    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { INSTRUCTION_RRL(ADDI, $2, $4, $6); }
 	| JALR   REGISTER                                 end_of_statement { INSTRUCTION_RR(JALR, $2, kasm::RA); }
@@ -409,142 +415,181 @@ std::string lexStringLiteral(lexcontext& ctx)
 {
 	std::string str;
 
-	%{ /* Begin re2c lexer */
-    re2c:yyfill:enable = 0;
-    re2c:define:YYCTYPE = "char";
-    re2c:define:YYCURSOR = "ctx.cursor";
-	%}
-init:
-	%{
-	"\n" { throw std::exception(std::string("Unclosed string: " + ctx.loc.begin.line).c_str()); }
+	std::streampos mar;
+	for (;;)
+	{
+		%{ /* Begin re2c lexer */
+		re2c:yyfill:enable = 0;
+		re2c:flags:input = custom;
+		re2c:api:style = free-form;
+		re2c:define:YYCTYPE   = char;
+		re2c:define:YYPEEK    = "ctx.in.peek()";
+		re2c:define:YYSKIP    = "do { ctx.in.ignore(); if (ctx.in.eof()) throw std::exception(\"Unclosed string\"); } while(0);";
+		re2c:define:YYBACKUP  = "mar = ctx.in.tellg();";
+		re2c:define:YYRESTORE = "ctx.in.seekg(mar);";
+		
+		"\n" { throw std::exception("Unclosed string"); }
 
-	"\\"([abfnrtv]|"\\"|"\'"|"\"") { str.push_back(ESCAPE_SEQUENCES.at(ctx.cursor[-1] & 0xFF)); goto init; }
+		"\\"([abfnrtv]|"\\"|"\'"|"\"") { str.push_back(ESCAPE_SEQUENCES.at(yych)); continue; }
+		[^\\"\""] { str.push_back(yych); continue; }
 
-	"\"" { return str; }
-	* { str.push_back(ctx.cursor[-1] & 0xFF); goto init; }
-	%}
+		"\"" { break; }
+		* { throw std::exception("Illegal escape character in string"); }
+		%}
+	}
+
+	return str;
 }
 
 yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 {
-    const char* YYMARKER;
-    const char* anchor = ctx.cursor;
-#define walk() { ctx.loc.columns(ctx.cursor - anchor); }
-#define advance() { anchor = ctx.cursor; ctx.loc.step(); goto init; }
-#define token(name) { walk(); return parser::make_##name(ctx.loc); }
-#define tokenv(name, ...) { walk(); return parser::make_##name(__VA_ARGS__, ctx.loc); }
-    %{ /* Begin re2c lexer */
-    re2c:yyfill:enable = 0;
-    re2c:define:YYCTYPE = "char";
-    re2c:define:YYCURSOR = "ctx.cursor";
+    std::streampos mar, s, e;
+    /*!stags:re2c format = 'std::streampos @@;'; */
 
-	end = "\x00";
-	%}
-init:
-	%{
-	// Directives
-	".text"|".TEXT"     { token(TEXT); }
-	".data"|".DATA"     { token(DATA); }
-	".word"|".WORD"     { token(WORD); }
-	".byte"|".BYTE"     { token(BYTE); }
-	".ascii"|".ASCII"   { token(ASCII); }
-	".asciiz"|".ASCIIZ" { token(ASCIIZ); }
-	".align"|".ALIGN"   { token(ALIGN); }
-	".space"|".SPACE"   { token(SPACE); }
+	auto getString = [](std::ifstream& in, std::streampos start, std::streampos end) -> std::string
+	{
+		std::string buffer;
+		buffer.resize(end - start);
+		in.seekg(start, std::ios::beg);
+		in.read(buffer.data(), end - start);
+		return buffer;
+	};
 
-	// Instructions
-	"add"|"ADD"         { token(ADD); }
-	"addi"|"ADDI"       { token(ADDI); }
-	"addiu"|"ADDIU"     { token(ADDIU); }
-	"addu"|"ADDU"       { token(ADDU); }
-	"and"|"AND"         { token(AND); }
-	"andi"|"ANDI"       { token(ANDI); }
-	"beq"|"BEQ"         { token(BEQ); }
-	"bgez"|"BGEZ"       { token(BGEZ); }
-	"bgezal"|"BGEZAL"   { token(BGEZAL); }
-	"bgtz"|"BGTZ"       { token(BGTZ); }
-	"blez"|"BLEZ"       { token(BLEZ); }
-	"bltz"|"BLTZ"       { token(BLTZ); }
-	"bltzal"|"BLTZAL"   { token(BLTZAL); }
-	"bne"|"BNE"         { token(BNE); }
-	"div"|"DIV"         { token(DIV); }
-	"divu"|"DIVU"       { token(DIVU); }
-	"j"|"J"             { token(J); }
-	"jal"|"JAL"         { token(JAL); }
-	"jr"|"JR"           { token(JR); }
-	"lb"|"LB"           { token(LB); }
-	"lui"|"LUI"         { token(LUI); }
-	"lw"|"LW"           { token(LW); }
-	"mfhi"|"MFHI"       { token(MFHI); }
-	"mflo"|"MFLO"       { token(MFLO); }
-	"mult"|"MULT"       { token(MULT); }
-	"multu"|"MULTU"     { token(MULTU); }
-	"or"|"OR"           { token(OR); }
-	"ori"|"ORI"         { token(ORI); }
-	"sb"|"SB"           { token(SB); }
-	"sll"|"SLL"         { token(SLL); }
-	"sllv"|"SLLV"       { token(SLLV); }
-	"slt"|"SLT"         { token(SLT); }
-	"slti"|"SLTI"       { token(SLTI); }
-	"sltiu"|"SLTIU"     { token(SLTIU); }
-	"sltu"|"SLTU"       { token(SLTU); }
-	"sra"|"SRA"         { token(SRA); }
-	"srl"|"SRL"         { token(SRL); }
-	"srlv"|"SRLV"       { token(SRLV); }
-	"sub"|"SUB"         { token(SUB); }
-	"subu"|"SUBU"       { token(SUBU); }
-	"sw"|"SW"           { token(SW); }
-	"sys"|"SYS"         { token(SYS); }
-	"xor"|"XOR"         { token(XOR); }
-	"xori"|"XORI"       { token(XORI); }
-	"jalr"|"JALR"       { token(JALR); }
-	"nor"|"NOR"         { token(NOR); }
+	auto getChar = [](std::ifstream& in, std::streampos start, std::streampos end) -> char
+	{
+		in.seekg(start, std::ios::beg);
+		char c;
+		in.get(c);
+		in.seekg(end, std::ios::beg);
+		return c;
+	};
 
-	// Pseudoinstructions
-	"mov"|"MOV"         { token(MOV); }
-	"clr"|"CLR"         { token(CLR); }
-	"b"|"B"             { token(B); }
-	"bal"|"BAL"         { token(BAL); }
-	"bgt"|"BGT"         { token(BGT); }
-	"blt"|"BLT"         { token(BLT); }
-	"bge"|"BGE"         { token(BGE); }
-	"ble"|"BLE"         { token(BLE); }
-	"bgtu"|"BGTU"       { token(BGTU); }
-	"BEQZ"|"BEQZ"       { token(BEQZ); }
-	"rem"|"REM"         { token(REM); }
-	"li"|"LI"           { token(LI); }
-	"la"|"LA"           { token(LA); }
-	"nop"|"NOP"         { token(NOP); }
-	"not"|"NOT"         { token(NOT); }
+#define GET_STRING() getString(ctx.in, s, e)
+#define GET_CHAR() getChar(ctx.in, s, e)
+#define TOKEN(name) { return parser::make_##name(ctx.loc); }
+#define TOKENV(name, ...) { return parser::make_##name(__VA_ARGS__, ctx.loc); }
 
-	// Identifier
-	[a-zA-Z_][a-zA-Z_0-9]* { tokenv(IDENTIFIER, std::string(anchor, ctx.cursor)); }
+	for (;;)
+	{
+		%{ /* Begin re2c lexer */
+		re2c:yyfill:enable = 0;
+		re2c:flags:input = custom;
+		re2c:api:style = free-form;
+		re2c:define:YYCTYPE      = char;
+		re2c:define:YYPEEK       = "ctx.in.peek()";
+		re2c:define:YYSKIP       = "do { ctx.in.ignore(); if (ctx.in.eof()) TOKEN(END_OF_FILE); } while(0);";
+		re2c:define:YYBACKUP     = "mar = ctx.in.tellg();";
+		re2c:define:YYRESTORE    = "ctx.in.seekg(mar);";
+		re2c:define:YYSTAGP      = "@@{tag} = ctx.in.eof() ? ctx.endOfStream : ctx.in.tellg();";
+		re2c:define:YYSTAGN      = "@@{tag} = 0;";
+		re2c:define:YYSHIFTSTAG  = "@@{tag} += @@{shift};";
+        re2c:flags:tags = 1;
 
-	// Register
-	"$"("zero"|"at"|"gp"|"sp"|"fp"|"ra"|"a"[0-3]|"v"[0-1]|"t"[0-9]|"s"[0-7]|"k"[0-1]) { tokenv(REGISTER, REGISTER_NAMES.at(std::string(anchor + 1, ctx.cursor))); }
-	"$"([0-9]|[1-2][0-9]|"3"[0-1]) { tokenv(REGISTER, std::stoi(std::string(anchor + 1, ctx.cursor))); }
+		// Directives
+		".text"|".TEXT"     { TOKEN(TEXT); }
+		".data"|".DATA"     { TOKEN(DATA); }
+		".word"|".WORD"     { TOKEN(WORD); }
+		".byte"|".BYTE"     { TOKEN(BYTE); }
+		".ascii"|".ASCII"   { TOKEN(ASCII); }
+		".asciiz"|".ASCIIZ" { TOKEN(ASCIIZ); }
+		".align"|".ALIGN"   { TOKEN(ALIGN); }
+		".space"|".SPACE"   { TOKEN(SPACE); }
 
-	// Literals
-	[-+]?[0-9]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor))); }
-	"0b"[01]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor), nullptr, 2)); }
-	"0x"[0-9a-fA-F]+ { tokenv(LITERAL, std::stoi(std::string(anchor, ctx.cursor), nullptr, 16)); }
-	"'\\"."'"                { tokenv(LITERAL, ESCAPE_SEQUENCES.at(anchor[1])); }
-	"'"."'"                  { tokenv(LITERAL, anchor[1]); }
+		// Instructions
+		"add"|"ADD"         { TOKEN(ADD); }
+		"addi"|"ADDI"       { TOKEN(ADDI); }
+		"addiu"|"ADDIU"     { TOKEN(ADDIU); }
+		"addu"|"ADDU"       { TOKEN(ADDU); }
+		"and"|"AND"         { TOKEN(AND); }
+		"andi"|"ANDI"       { TOKEN(ANDI); }
+		"beq"|"BEQ"         { TOKEN(BEQ); }
+		"bgez"|"BGEZ"       { TOKEN(BGEZ); }
+		"bgezal"|"BGEZAL"   { TOKEN(BGEZAL); }
+		"bgtz"|"BGTZ"       { TOKEN(BGTZ); }
+		"blez"|"BLEZ"       { TOKEN(BLEZ); }
+		"bltz"|"BLTZ"       { TOKEN(BLTZ); }
+		"bltzal"|"BLTZAL"   { TOKEN(BLTZAL); }
+		"bne"|"BNE"         { TOKEN(BNE); }
+		"div"|"DIV"         { TOKEN(DIV); }
+		"divu"|"DIVU"       { TOKEN(DIVU); }
+		"j"|"J"             { TOKEN(J); }
+		"jal"|"JAL"         { TOKEN(JAL); }
+		"jr"|"JR"           { TOKEN(JR); }
+		"lb"|"LB"           { TOKEN(LB); }
+		"lui"|"LUI"         { TOKEN(LUI); }
+		"lw"|"LW"           { TOKEN(LW); }
+		"mfhi"|"MFHI"       { TOKEN(MFHI); }
+		"mflo"|"MFLO"       { TOKEN(MFLO); }
+		"mult"|"MULT"       { TOKEN(MULT); }
+		"multu"|"MULTU"     { TOKEN(MULTU); }
+		"or"|"OR"           { TOKEN(OR); }
+		"ori"|"ORI"         { TOKEN(ORI); }
+		"sb"|"SB"           { TOKEN(SB); }
+		"sll"|"SLL"         { TOKEN(SLL); }
+		"sllv"|"SLLV"       { TOKEN(SLLV); }
+		"slt"|"SLT"         { TOKEN(SLT); }
+		"slti"|"SLTI"       { TOKEN(SLTI); }
+		"sltiu"|"SLTIU"     { TOKEN(SLTIU); }
+		"sltu"|"SLTU"       { TOKEN(SLTU); }
+		"sra"|"SRA"         { TOKEN(SRA); }
+		"srl"|"SRL"         { TOKEN(SRL); }
+		"srlv"|"SRLV"       { TOKEN(SRLV); }
+		"sub"|"SUB"         { TOKEN(SUB); }
+		"subu"|"SUBU"       { TOKEN(SUBU); }
+		"sw"|"SW"           { TOKEN(SW); }
+		"sys"|"SYS"         { TOKEN(SYS); }
+		"xor"|"XOR"         { TOKEN(XOR); }
+		"xori"|"XORI"       { TOKEN(XORI); }
+		"jalr"|"JALR"       { TOKEN(JALR); }
+		"nor"|"NOR"         { TOKEN(NOR); }
 
-	// String
-	"\""               { tokenv(STRING, lexStringLiteral(ctx)); }
+		// Pseudoinstructions
+		"copy"|"COPY"       { TOKEN(COPY); }
+		"clr"|"CLR"         { TOKEN(CLR); }
+		"b"|"B"             { TOKEN(B); }
+		"bal"|"BAL"         { TOKEN(BAL); }
+		"bgt"|"BGT"         { TOKEN(BGT); }
+		"blt"|"BLT"         { TOKEN(BLT); }
+		"bge"|"BGE"         { TOKEN(BGE); }
+		"ble"|"BLE"         { TOKEN(BLE); }
+		"bgtu"|"BGTU"       { TOKEN(BGTU); }
+		"BEQZ"|"BEQZ"       { TOKEN(BEQZ); }
+		"rem"|"REM"         { TOKEN(REM); }
+		"li"|"LI"           { TOKEN(LI); }
+		"la"|"LA"           { TOKEN(LA); }
+		"nop"|"NOP"         { TOKEN(NOP); }
+		"not"|"NOT"         { TOKEN(NOT); }
 
-	// Whitespace
-	"\r\n"|[\r\n]{ ctx.loc.lines(); ctx.loc.step(); token(END_OF_LINE); }
-	[\t\v\b\f ] { ctx.loc.columns(); advance(); }
+		// Identifier
+		@s [a-zA-Z_][a-zA-Z_0-9]* @e { TOKENV(IDENTIFIER, GET_STRING()); }
 
-	// Comment
-	"#"[^\r\n]* { walk(); advance(); }
+		// Register
+		"$" @s ("zero"|"at"|"gp"|"sp"|"fp"|"ra"|"a"[0-3]|"v"[0-1]|"t"[0-9]|"s"[0-7]|"k"[0-1]) @e { TOKENV(REGISTER, REGISTER_NAMES.at(GET_STRING())); }
+		"$" @s ([0-9]|[1-2][0-9]|"3"[0-1]) @e { TOKENV(REGISTER, std::stoi(GET_STRING())); }
 
-	end { token(END_OF_FILE); }
-	// Single character operators
-	* { walk(); return parser::symbol_type(parser::token_type(ctx.cursor[-1] & 0xFF), ctx.loc); }
-	%}
+		// Literals
+		@s [-+]?[0-9]+ @e      { TOKENV(LITERAL, std::stoi(GET_STRING(), nullptr, 10)); }
+		@s "0b"[01]+ @e        { TOKENV(LITERAL, std::stoi(GET_STRING(), nullptr, 2)); }
+		@s "0x"[0-9a-fA-F]+ @e { TOKENV(LITERAL, std::stoi(GET_STRING(), nullptr, 16)); }
+		"'\\" @s ."'" @e       { TOKENV(LITERAL, ESCAPE_SEQUENCES.at(GET_CHAR())); }
+		"'" @s [^\\]"'" @e     { TOKENV(LITERAL, GET_CHAR()); }
+
+		// String
+		"\""                   { TOKENV(STRING, lexStringLiteral(ctx)); }
+
+		// Whitespace
+		"\r\n"|[\r\n]          { ctx.loc.lines(); ctx.loc.step(); TOKEN(END_OF_LINE); }
+		[\t\v\b\f ]            { ctx.loc.columns(); continue; }
+
+		// Comment
+		@s "#"[^\r\n]* @e { continue; }
+
+		// Single character operators
+		@s [:,+()] @e { return parser::symbol_type(parser::token_type(GET_CHAR()), ctx.loc); }
+
+		* { throw std::exception(std::string("Invalid character: " + GET_CHAR()).c_str()); }
+		%}
+	}
 }
 
 void yy::parser::error(const location_type& l, const std::string& message)
@@ -559,22 +604,12 @@ namespace kasm
         labelLocations.clear();
         unresolvedAddressLocations.clear();
 
-        std::ifstream asmFile(asmPath);
+        lexcontext ctx(asmPath);
 		binary.open(programPath);
 
-        std::string sourceCode;
-        asmFile.seekg(0, std::ios::end);
-        sourceCode.reserve(asmFile.tellg());
-        asmFile.seekg(0, std::ios::beg);
-
-        sourceCode.assign((std::istreambuf_iterator<char>(asmFile)),
-            std::istreambuf_iterator<char>());
-        
-        lexcontext ctx;
 		std::string fileName = asmPath;
 		ctx.loc.begin.filename = &fileName;
     	ctx.loc.end.filename   = &fileName;
-        ctx.cursor = sourceCode.c_str();
 		ctx.assembler = this;
         yy::parser parser(ctx);
         parser.parse();
