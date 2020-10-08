@@ -44,7 +44,7 @@ namespace kasm
 			{ ADDIU, RRI },
 			{ ADDU, RRR },
 			{ AND, RRR },
-			{ ANDI, R0 | R1 | I },
+			{ ANDI, RRI },
 			{ BEQ, RRDAO },
 			{ BGEZ, RRDAO },
 			{ BGEZAL, RRDAO },

@@ -3,10 +3,6 @@ main:
 	li $v0, 6        # bruh
 	la $a0, bruh
 	sys
-	li $v0, 4        # new line
-	li $a0, 10
-	sys
-
 ask:
 	li $v0, 6        # ask y/n
 	la $a0, prompt_a
@@ -36,9 +32,6 @@ yes:
 	li $v0, 6
 	la $a0, msg
 	sys
-	li $v0, 4        # new line
-	li $a0, 10
-	sys
 	j ask
 
 skip:
@@ -66,16 +59,16 @@ msg:
 	.byte ' ':32
 
 bruh:
-	.asciiz "bruh"
+	.asciiz "bruh\n"
 
 prompt_a:
 	.asciiz "Would you like to type something? (y/n): "
 
 prompt:
-	.asciiz "Type something: "
+	.asciiz "Type something\n> "
 
 bye:
-	.asciiz "Thank you for running this program."
+	.asciiz "Thank you for running this program.\n"
 
 some_trash:
 	.word 4

@@ -572,7 +572,7 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		@s "0b"[01]+ @e        { TOKENV(LITERAL, std::stoi(GET_STRING(), nullptr, 2)); }
 		@s "0x"[0-9a-fA-F]+ @e { TOKENV(LITERAL, std::stoi(GET_STRING(), nullptr, 16)); }
 		"'\\" @s ."'" @e       { TOKENV(LITERAL, ESCAPE_SEQUENCES.at(GET_CHAR())); }
-		"'" @s [^\\]"'" @e     { TOKENV(LITERAL, GET_CHAR()); }
+		"'" @s [^\\"\'"]"'" @e     { TOKENV(LITERAL, GET_CHAR()); }
 
 		// String
 		"\""                   { TOKENV(STRING, lexStringLiteral(ctx)); }

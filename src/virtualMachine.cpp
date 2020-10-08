@@ -255,7 +255,7 @@ namespace kasm
         program.resize(programFile.tellg());
         programFile.seekg(0, std::ios::beg);
         programFile.read(reinterpret_cast<char*>(program.data()), program.size());
-
+        /*
         std::cout << "Loaded program: " << programPath << std::endl;
         std::cout << "--- BEGIN PROGRAM MEMORY ---" << std::endl;
         for (int i = 0; i < program.size() / INSTRUCTION_SIZE; i++)
@@ -271,6 +271,7 @@ namespace kasm
             }
         }
         std::cout << "---  END PROGRAM MEMORY  ---" << std::endl;
+        */
     }
 
     void VirtualMachine::systemCall()
