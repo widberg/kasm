@@ -2,7 +2,6 @@
 
 #include <cstdlib>
 #include <exception>
-#include <fstream>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -25,9 +24,9 @@ namespace kasm
         std::uint8_t* stack = new std::uint8_t[144];
         registers[SP] = reinterpret_cast<std::uint32_t>(stack + 144 - 1);
 
-        while (pc < program.size() && !shouldExit)
+        while (pc < program.getTextSegmentLength() && !shouldExit)
         {
-            std::uint32_t instruction = *reinterpret_cast<std::uint32_t*>(program.data() + pc);
+            std::uint32_t instruction = program.getWord(pc);
 
             InstructionData d = { instruction };
 
@@ -127,7 +126,7 @@ namespace kasm
                 advancePc();
                 break;
             case LW:
-                registers[d.register0] = *reinterpret_cast<std::uint32_t*>(program.data() + resolveAddress(d, AddressType::IndirectAddressOffset));
+                registers[d.register0] = program.getWord(resolveAddress(d, AddressType::IndirectAddressOffset));
                 advancePc();
                 break;
             case MFHI:
@@ -211,7 +210,7 @@ namespace kasm
                 advancePc();
                 break;
             case SW:
-                *reinterpret_cast<std::uint32_t*>(program.data() + resolveAddress(d, AddressType::IndirectAddressOffset)) = registers[d.register0];
+                program.getWord(resolveAddress(d, AddressType::IndirectAddressOffset)) = registers[d.register0];
                 advancePc();
                 break;
             case SYS:
@@ -234,10 +233,6 @@ namespace kasm
                 registers[d.register0] = ~(registers[d.register1] | registers[d.register2]);
                 advancePc();
                 break;
-            case TEXT:
-            case DATA:
-                advancePc();
-                break;
             default:
                 throw std::exception(std::string("Illegal opcode: " + d.opcode).c_str());
                 break;
@@ -251,16 +246,13 @@ namespace kasm
 
     void VirtualMachine::loadProgram(const std::string& programPath)
     {
-        std::ifstream programFile(programPath, std::ios::ate | std::ios::binary);
-        program.resize(programFile.tellg());
-        programFile.seekg(0, std::ios::beg);
-        programFile.read(reinterpret_cast<char*>(program.data()), program.size());
+        program.open(programPath);
         /*
         std::cout << "Loaded program: " << programPath << std::endl;
         std::cout << "--- BEGIN PROGRAM MEMORY ---" << std::endl;
         for (int i = 0; i < program.size() / INSTRUCTION_SIZE; i++)
         {
-            std::cout << "0x" << std::hex << std::setw(8) << std::setfill('0') << *reinterpret_cast<std::uint32_t*>(program.data() + i * INSTRUCTION_SIZE);
+            std::cout << "0x" << std::hex << std::setw(8) << std::setfill('0') << program.getWord(i * INSTRUCTION_SIZE);
             if ((i + 1) % 8 && i < program.size() / INSTRUCTION_SIZE - 1)
             {
                 std::cout << " ";
@@ -310,14 +302,14 @@ namespace kasm
                 unsigned int i = 0;
                 while ((c = std::cin.get()) != '\n' && i < registers[A1] - 1)
                 {
-                    *reinterpret_cast<char*>(program.data() + registers[A0] + i) = c;
+                    *program.getCharPtr(registers[A0] + i) = c;
                     i++;
                 }
-                *reinterpret_cast<char*>(program.data() + registers[A0] + i) = '\0';
+                *program.getCharPtr(registers[A0] + i) = '\0';
             }
             break;
         case WRITE_STRING:
-            std::cout << reinterpret_cast<char*>(program.data() + registers[A0]);
+            std::cout << program.getCharPtr(registers[A0]);
             break;
         case ALLOCATE:
             registers[V0] = reinterpret_cast<std::uint32_t>(new std::uint8_t[registers[A0]]);

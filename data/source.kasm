@@ -52,11 +52,13 @@ func:
 	jr $ra     # return
 
 	.data
+	# error occurs here
 ret:
 	.space 4   # reserve 1 word of space in memory
 
 msg:
-	.byte ' ':32
+	#.byte ' ':32
+	.space 32
 
 bruh:
 	.asciiz "bruh\n"
@@ -76,3 +78,10 @@ some_trash:
 	.byte 2
 	.word 3
 	.byte 5
+	.message "test"
+	#.include "more_data.kasm"
+	.message "test2"
+
+
+
+

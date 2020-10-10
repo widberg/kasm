@@ -1,0 +1,3 @@
+	.message "MORE DATA TEST"
+	.word 6
+	.message "MORE DATA TEST 2"

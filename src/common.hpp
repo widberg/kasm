@@ -106,8 +106,6 @@ namespace kasm
         XORI,
         JALR,
         NOR,
-        TEXT,
-        DATA
     };
 
     enum Register : std::uint32_t
@@ -160,4 +158,6 @@ namespace kasm
         std::uint32_t dataSegmentBegin;
         std::uint32_t dataSegmentLength;
     };
+
+    static const std::uint32_t DATA_SEGMENT_OFFSET = 0x10010000;
 }

@@ -20,6 +20,7 @@ namespace kasm
 		~Assembler() {};
 
 		void assemble(const std::string& asmPath, const std::string& programPath);
+		void saveSymbolTable(const std::string& symbolTablePath);
 	private:
 		bool resolveAddress(AddressData& address, bool mustResolve = false);
 		void defineLabel(const std::string& name, std::uint32_t location);
