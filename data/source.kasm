@@ -79,7 +79,7 @@ some_trash:
 	.word 3
 	.byte 5
 	.message "test"
-	#.include "more_data.kasm"
+	.include "more_data.kasm"
 	.message "test2"
 
 

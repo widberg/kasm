@@ -25,6 +25,8 @@
 #include <variant>
 #include <vector>
 
+#include "compoundInputFileStream.hpp"
+
 struct lexcontext;
 }//%code requires
 
@@ -35,60 +37,11 @@ struct lexcontext;
 struct lexcontext
 {
 	lexcontext(const std::string& aFileName)
-		: in(aFileName, std::ios::binary | std::ios::ate), fileName(aFileName)
-	{
-		endOfStream = in.tellg();
-		in.seekg(0, std::ios::beg);
-		loc.begin.filename = &fileName;
-		loc.end.filename = &fileName;
-	};
+		: in(aFileName) {};
 
-	std::ifstream in;
-	std::string fileName;
-	std::streampos endOfStream;
+	kasm::CompoundInputFileStream in;
 	yy::location loc;
-    kasm::Assembler* assembler;
-
-	struct InputStreamRestorationData
-	{
-		std::string fileName;
-		std::streampos position;
-		std::streampos endOfStream;
-		yy::location loc;
-	};
-
-	std::stack<InputStreamRestorationData> inputStreamRestorationStack;
-
-	void pushFile(const std::string& aFileName)
-	{
-		inputStreamRestorationStack.push({ fileName, in.tellg(), endOfStream, loc });
-		in.open(aFileName, std::ios::binary | std::ios::ate);
-		fileName = aFileName;
-		endOfStream = in.tellg();
-		in.seekg(0, std::ios::beg);
-		loc = yy::location();
-		loc.begin.filename = &fileName;
-		loc.end.filename = &fileName;
-	}
-
-	bool popFile()
-	{
-		if (inputStreamRestorationStack.empty())
-		{
-			return false;
-		}
-
-		InputStreamRestorationData inputStreamRestorationData = inputStreamRestorationStack.top();
-		in.open(inputStreamRestorationData.fileName, std::ios::binary);
-		in.seekg(inputStreamRestorationData.position, std::ios::beg);
-		fileName = inputStreamRestorationData.fileName;
-		endOfStream = inputStreamRestorationData.endOfStream;
-		loc = inputStreamRestorationData.loc;
-
-		inputStreamRestorationStack.pop();
-
-		return true;
-	}
+	kasm::Assembler* assembler;
 };
 
 namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
@@ -292,10 +245,18 @@ statement
 		$$ = GET_LOC(); 
 		ctx.assembler->binary.pad($2);
 	}
-	| INCLUDE STRING end_of_statement { $$ = GET_LOC(); ctx.pushFile($2); }
-	| ERROR   STRING end_of_statement { $$ = GET_LOC(); std::cout << "ERROR: " << $2 << std::endl; throw std::exception($2.c_str()); }
+	| INCLUDE STRING end_of_statement { $$ = GET_LOC(); ctx.in.include($2); }
+	| ERROR   STRING end_of_statement { $$ = GET_LOC(); std::cout << "ERROR: " << $2 << std::endl; throw std::exception("Assembler user defined error"); }
 	| MESSAGE STRING end_of_statement { $$ = GET_LOC(); std::cout << "MESSAGE: " << $2 << std::endl; }
-	
+	| MACRO IDENTIFIER '(' identifier_list ')' statement_list END end_of_statement statement
+	{
+		$$ = $9;
+	}
+	| IDENTIFIER '(' argument_list ')' end_of_statement
+	{
+		$$ = GET_LOC();
+	}
+
 	// Instructions
     | ADD    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(ADD, $2, $4, $6); }
 	| ADDI   REGISTER ',' REGISTER ',' LITERAL        end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(ADDI, $2, $4, $6); }
@@ -403,6 +364,21 @@ literal_list
     | literal_list ',' LITERAL    { $1.push_back($3); $$ = $1; }
 	| literal_list ',' IDENTIFIER { $1.push_back(kasm::AddressData($3)); $$ = $1; }
     ;
+
+identifier_list
+	: identifier_list IDENTIFIER
+	| %empty
+	;
+
+argument_list
+	: IDENTIFIER
+	| LITERAL
+	| direct_address
+	| address
+	| STRING
+	| REGISTER
+	| %empty
+	;
 
 direct_address
 	: IDENTIFIER
@@ -522,21 +498,21 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
     std::streampos mar, s, e;
     /*!stags:re2c format = 'std::streampos @@;'; */
 
-	auto getString = [](std::ifstream& in, std::streampos start, std::streampos end) -> std::string
+	auto getString = [](kasm::CompoundInputFileStream& in, std::streampos start, std::streampos end) -> std::string
 	{
 		std::string buffer;
 		buffer.resize(end - start);
-		in.seekg(start, std::ios::beg);
+		in.seekg(start);
 		in.read(buffer.data(), end - start);
 		return buffer;
 	};
 
-	auto getChar = [](std::ifstream& in, std::streampos start, std::streampos end) -> char
+	auto getChar = [](kasm::CompoundInputFileStream& in, std::streampos start, std::streampos end) -> char
 	{
-		in.seekg(start, std::ios::beg);
+		in.seekg(start);
 		char c;
 		in.get(c);
-		in.seekg(end, std::ios::beg);
+		in.seekg(end);
 		return c;
 	};
 
@@ -553,10 +529,10 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		re2c:api:style = free-form;
 		re2c:define:YYCTYPE      = char;
 		re2c:define:YYPEEK       = "ctx.in.peek()";
-		re2c:define:YYSKIP       = "do { ctx.in.ignore(); if (ctx.in.eof() && !ctx.popFile()) TOKEN(END_OF_FILE); else if (ctx.in.eof()) TOKEN(END_OF_LINE); } while(0);";
+		re2c:define:YYSKIP       = "do { ctx.in.ignore(); if (ctx.in.eof()) TOKEN(END_OF_FILE); } while(0);";
 		re2c:define:YYBACKUP     = "mar = ctx.in.tellg();";
 		re2c:define:YYRESTORE    = "ctx.in.seekg(mar);";
-		re2c:define:YYSTAGP      = "@@{tag} = ctx.in.eof() ? ctx.endOfStream : ctx.in.tellg();";
+		re2c:define:YYSTAGP      = "@@{tag} = ctx.in.eof() ? 0 : ctx.in.tellg();";
 		re2c:define:YYSTAGN      = "@@{tag} = 0;";
 		re2c:define:YYSHIFTSTAG  = "@@{tag} += @@{shift};";
         re2c:flags:tags = 1;
@@ -660,7 +636,7 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 
 		// Whitespace
 		"\r\n"|[\r\n]          { ctx.loc.lines(); ctx.loc.step(); TOKEN(END_OF_LINE); }
-		[\t\v\b\f ]            { ctx.loc.columns(); continue; }
+		[ \t\v\b\f]            { ctx.loc.columns(); continue; }
 
 		// Comment
 		@s "#"[^\r\n]* @e { continue; }
@@ -668,7 +644,7 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		// Single character operators
 		@s [:,+()] @e { return parser::symbol_type(parser::token_type(GET_CHAR()), ctx.loc); }
 
-		* { throw std::exception(std::string("Invalid character: " + GET_CHAR()).c_str()); }
+		@s * @e { throw std::exception(std::string("Invalid character of value: " + std::to_string(GET_CHAR())).c_str()); }
 		%}
 	}
 }
