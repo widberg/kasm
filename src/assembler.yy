@@ -1,3 +1,4 @@
+%no-lines
 %require "3.4.1"
 %language "c++"
 
@@ -34,14 +35,25 @@ struct lexcontext;
 
 %code
 {
+enum class CTXFlag
+{
+	None,
+	LINE_AS_STRING
+};
+
 struct lexcontext
 {
 	lexcontext(const std::string& aFileName)
-		: in(aFileName) {};
+		: in(aFileName), flag(CTXFlag::None)
+	{
+		loc.begin.filename = &in.getIdentifier();
+		loc.end.filename = &in.getIdentifier();
+	};
 
 	kasm::CompoundInputFileStream in;
 	yy::location loc;
 	kasm::Assembler* assembler;
+	CTXFlag flag;
 };
 
 namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
@@ -145,7 +157,7 @@ union SplitWord
 %token END_OF_FILE 0 END_OF_LINE
 %token IDENTIFIER LITERAL STRING REGISTER
 
-%token TEXT DATA WORD BYTE ASCII ASCIIZ ALIGN SPACE INCLUDE ERROR MESSAGE MACRO END
+%token TEXT DATA WORD BYTE ASCII ASCIIZ ALIGN SPACE INCLUDE ERROR MESSAGE MACRO END DBG DEFINE
 
 %token ADD ADDI ADDIU ADDU AND ANDI BEQ BGEZ BGEZAL BGTZ BLEZ BLTZ BLTZAL BNE
 %token DIV DIVU J JAL JR LB LUI LW MFHI MFLO MULT MULTU OR ORI SB SLL SLLV NOR
@@ -245,9 +257,11 @@ statement
 		$$ = GET_LOC(); 
 		ctx.assembler->binary.pad($2);
 	}
-	| INCLUDE STRING end_of_statement { $$ = GET_LOC(); ctx.in.include($2); }
-	| ERROR   STRING end_of_statement { $$ = GET_LOC(); std::cout << "ERROR: " << $2 << std::endl; throw std::exception("Assembler user defined error"); }
-	| MESSAGE STRING end_of_statement { $$ = GET_LOC(); std::cout << "MESSAGE: " << $2 << std::endl; }
+	| INCLUDE STRING end_of_statement { ctx.in.include($2); } statement { $$ = $5; }
+	| ERROR   STRING end_of_statement statement { $$ = $4; std::cout << "ERROR: " << $2 << std::endl; throw std::exception("Assembler user defined error"); }
+	| MESSAGE STRING end_of_statement statement { $$ = $4; std::cout << "MESSAGE: " << $2 << std::endl; }
+	| DBG     STRING end_of_statement statement { $$ = $4; ctx.in.pushString($2); }
+	| DEFINE IDENTIFIER { ctx.flag = CTXFlag::LINE_AS_STRING; } STRING { ctx.flag = CTXFlag::None; ctx.assembler->defineMacro($2, $4); } end_of_statement statement { $$ = $7; }
 	| MACRO IDENTIFIER '(' identifier_list ')' statement_list END end_of_statement statement
 	{
 		$$ = $9;
@@ -493,6 +507,32 @@ std::string lexStringLiteral(lexcontext& ctx)
 	return str;
 }
 
+std::string lineAsString(lexcontext& ctx)
+{
+	std::string str;
+	char c;
+	std::streampos mar;
+	for (;;)
+	{
+		%{ /* Begin re2c lexer */
+		re2c:yyfill:enable = 0;
+		re2c:flags:input = custom;
+		re2c:api:style = free-form;
+		re2c:define:YYCTYPE   = char;
+		re2c:define:YYPEEK    = "ctx.in.peek()";
+		re2c:define:YYSKIP    = "do { ctx.in.ignore(); if (ctx.in.eof()) throw std::exception(\"Unclosed string\"); } while(0);";
+		re2c:define:YYBACKUP  = "mar = ctx.in.tellg();";
+		re2c:define:YYRESTORE = "ctx.in.seekg(mar);";
+		
+		[\x00]|"#"|[\n\r] { c = yych; break; }
+		* { str.push_back(yych); continue; }
+		%}
+	}
+
+	ctx.in.put(c);
+	return str;
+}
+
 yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 {
     std::streampos mar, s, e;
@@ -520,6 +560,15 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 #define GET_CHAR() getChar(ctx.in, s, e)
 #define TOKEN(name) do { return parser::make_##name(ctx.loc); } while(0)
 #define TOKENV(name, ...) do { return parser::make_##name(__VA_ARGS__, ctx.loc); } while(0)
+
+	switch (ctx.flag)
+	{
+	case CTXFlag::LINE_AS_STRING:
+		TOKENV(STRING, lineAsString(ctx));
+		break;
+	default:
+		break;
+	}
 
 	for (;;)
 	{
@@ -551,6 +600,8 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		".message"|".MESSAGE" { TOKEN(MESSAGE); }
 		".macro"|".MACRO"     { TOKEN(MACRO); }
 		".end"|".END"         { TOKEN(END); }
+		".dbg"|".DBG"         { TOKEN(DBG); }
+		".define"|".DEFINE"   { TOKEN(DEFINE); }
 
 		// Instructions
 		"add"|"ADD"           { TOKEN(ADD); }
@@ -618,7 +669,19 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		"not"|"NOT"           { TOKEN(NOT); }
 
 		// Identifier
-		@s [a-zA-Z_][a-zA-Z_0-9]* @e { TOKENV(IDENTIFIER, GET_STRING()); }
+		@s [a-zA-Z_][a-zA-Z_0-9]* @e
+		{
+			std::string identifier = GET_STRING();
+			if (ctx.assembler->macros.count(identifier))
+			{
+				ctx.in.pushString(ctx.assembler->macros[identifier]);
+				continue;
+			}
+			else
+			{
+				TOKENV(IDENTIFIER, identifier);
+			}
+		}
 
 		// Register
 		"$" @s ("zero"|"at"|"gp"|"sp"|"fp"|"ra"|"a"[0-3]|"v"[0-1]|"t"[0-9]|"s"[0-7]|"k"[0-1]) @e { TOKENV(REGISTER, REGISTER_NAMES.at(GET_STRING())); }
@@ -629,7 +692,7 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		@s "0b"[01]+ @e        { TOKENV(LITERAL, std::stoi(GET_STRING(), nullptr, 2)); }
 		@s "0x"[0-9a-fA-F]+ @e { TOKENV(LITERAL, std::stoi(GET_STRING(), nullptr, 16)); }
 		"'\\" @s ."'" @e       { TOKENV(LITERAL, ESCAPE_SEQUENCES.at(GET_CHAR())); }
-		"'" @s [^\\"\'"]"'" @e     { TOKENV(LITERAL, GET_CHAR()); }
+		"'" @s [^\\"\'"]"'" @e { TOKENV(LITERAL, GET_CHAR()); }
 
 		// String
 		"\""                   { TOKENV(STRING, lexStringLiteral(ctx)); }
@@ -694,82 +757,4 @@ namespace kasm
         binary.align(INSTRUCTION_SIZE);
 		binary.close();
     }
-
-    bool Assembler::resolveAddress(AddressData& address, bool mustResolve)
-    {
-		switch (address.type)
-		{
-		case AddressType::DirectAddressAbsolute:
-			if (labelLocations.count(address.label))
-			{
-				address.instructionData.directAddressAbsolute = labelLocations.at(address.label);
-				return true;
-			}
-			break;
-		case AddressType::DirectAddressOffset:
-			if (labelLocations.count(address.label))
-			{
-				address.instructionData.directAddressOffset = static_cast<std::int32_t>(labelLocations.at(address.label)) - address.position;
-				return true;
-			}
-			break;
-		case AddressType::IndirectAddressOffset:
-			if (address.label.empty())
-			{
-				address.instructionData.register1 = address.reg;
-				address.instructionData.directAddressOffset = static_cast<std::int32_t>(address.offset) - address.position;
-				return true;
-			}
-			else if (labelLocations.count(address.label))
-			{
-				address.instructionData.register1 = address.reg;
-				address.instructionData.directAddressOffset = static_cast<std::int32_t>(labelLocations.at(address.label)) + address.offset - address.position;
-				return true;
-			}
-			break;
-		case AddressType::DirectAddressAbsoluteWord:
-		case AddressType::DirectAddressAbsoluteByte:
-		case AddressType::DirectAddressAbsoluteLoad:
-			if (labelLocations.count(address.label))
-			{
-				address.instructionData.instruction = labelLocations.at(address.label);
-				return true;
-			}
-			break;
-		default:
-			break;
-		}
-
-		if (mustResolve)
-		{
-            throw std::exception(std::string("Unresolved Label: " + address.label).c_str());
-		}
-
-        unresolvedAddressLocations.push_back(address);
-
-		return false;
-    }
-
-	void Assembler::defineLabel(const std::string& name, std::uint32_t location)
-	{
-		if (labelLocations.count(name))
-		{
-            throw std::exception(std::string("Redefined Label: " + name).c_str());
-		}
-
-		labelLocations[name] = location;
-	}
-
-	void Assembler::saveSymbolTable(const std::string& symbolTablePath)
-	{
-		std::ofstream symbolTableFile(symbolTablePath, std::ios::binary);
-
-		for (auto symbol : labelLocations)
-		{
-			std::uint8_t labelSize = symbol.first.size();
-			symbolTableFile.write(reinterpret_cast<char*>(&labelSize), sizeof(labelSize));
-			symbolTableFile.write(symbol.first.c_str(), labelSize);
-			symbolTableFile.write(reinterpret_cast<char*>(&symbol.second), sizeof(symbol.second));
-		}
-	}
 }

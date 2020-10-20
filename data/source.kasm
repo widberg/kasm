@@ -1,10 +1,15 @@
+	.define SYS_PRINT_STRING li $v0, 6
+	.message "Define works"
 	.text
+	.message "test"
 main:
-	li $v0, 6        # bruh
+	.message "About to expand"
+	SYS_PRINT_STRING        # bruh
+	.message "Expand works"
 	la $a0, bruh
 	sys
 ask:
-	li $v0, 6        # ask y/n
+	SYS_PRINT_STRING        # ask y/n
 	la $a0, prompt_a
 	sys
 	li $v0, 3        # ans
@@ -22,20 +27,20 @@ ask:
 	j ask
 
 yes:
-	li $v0, 6
+	SYS_PRINT_STRING
 	la $a0, prompt
 	sys
 	li $v0, 5
 	la $a0, msg
 	li $a1, 32
 	sys
-	li $v0, 6
+	SYS_PRINT_STRING
 	la $a0, msg
 	sys
 	j ask
 
 skip:
-	li $v0, 6        # bye
+	SYS_PRINT_STRING        # bye
 	la $a0, bye
 	sys
 	li $v0, 0   # systemCallType = EXIT
@@ -81,7 +86,7 @@ some_trash:
 	.message "test"
 	.include "more_data.kasm"
 	.message "test2"
-
+	.dbg ".dbg \".message \\\"fuck\\\"\""
 
 
 

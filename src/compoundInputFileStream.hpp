@@ -1,7 +1,9 @@
 #pragma once
 
 #include <fstream>
+#include <istream>
 #include <stack>
+#include <sstream>
 #include <string>
 
 namespace kasm
@@ -10,6 +12,7 @@ namespace kasm
 	{
 	public:
 		CompoundInputFileStream(const std::string& aFileName);
+		~CompoundInputFileStream();
 
 		char peek();
 		void ignore();
@@ -20,6 +23,10 @@ namespace kasm
 		void read(char* buffer, unsigned size);
 
 		bool include(const std::string& aFileName);
+		bool pushString(const std::string& str);
+		bool put(char c);
+
+		std::string& getIdentifier();
 	private:
 		void popFile();
 
@@ -27,14 +34,15 @@ namespace kasm
 		{
 			std::string fileName;
 			std::streampos position;
-			int peekChar;
+			bool isFile;
 		};
 
-		std::ifstream in;
+		std::istream* in;
 		std::string fileName;
 		std::streampos totalPos;
+		bool isFile;
 
-		bool isEof;
+		std::string identifier;
 
 		std::stack<StreamRestorationData> streamRestorationDataStack;
 	};

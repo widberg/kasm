@@ -9,7 +9,7 @@ add_executable(kasm
 	src/kasm.cpp
 	src/common.hpp
 	src/compoundInputFileStream.cpp src/compoundInputFileStream.hpp
-	src/assembler.hpp src/assembler.cpp src/assembler.yy
+	src/assembler.hpp src/assembler.cpp src/assembler.yy src/assembler_util.cpp
 	src/binaryBuilder.hpp src/binaryBuilder.cpp
 	src/compiler.hpp src/compiler.cpp
 	src/disassembler.hpp src/disassembler.cpp
@@ -19,7 +19,7 @@ add_executable(kasm
 )
 add_custom_target(kasm_grammar ALL
 	COMMAND bison assembler.yy -o assembler.cpp.re
-	COMMAND re2c assembler.cpp.re -o assembler.cpp
+	COMMAND re2c assembler.cpp.re -o assembler.cpp --no-debug-info
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 add_dependencies(kasm kasm_grammar)

@@ -3,15 +3,20 @@
 namespace kasm
 {
 	CompoundInputFileStream::CompoundInputFileStream(const std::string& aFileName)
+		: in(nullptr)
 	{
 		include(aFileName);
-		isEof = false;
+	}
+
+	CompoundInputFileStream::~CompoundInputFileStream()
+	{
+		delete in;
 	}
 
 	char CompoundInputFileStream::peek()
 	{
-		if (isEof) return '\n';
-		int c = in.peek();
+		if (in == nullptr) return '\n';
+		int c = in->peek();
 		if (c == -1)
 		{
 			c = '\n';
@@ -21,71 +26,97 @@ namespace kasm
 
 	void CompoundInputFileStream::ignore()
 	{
-		if (isEof) return;
+		if (in == nullptr) return;
 		do
 		{
-			if (in.eof())
+			if (in->eof())
 			{
 				popFile();
-				if (isEof) return;
+				if (in == nullptr) return;
 			}
-			in.ignore();
-		} while (in.eof());
+			in->ignore();
+		} while (in->eof());
 	}
 
 	void CompoundInputFileStream::seekg(const std::streampos& streamPos)
 	{
-		if (isEof) return;
+		if (in == nullptr) return;
 		while (streamPos <= totalPos)
 		{
 			popFile();
-			if (isEof) return;
+			if (in == nullptr) return;
 		}
-		in.seekg(streamPos - totalPos, std::ios::beg);
+		in->clear();
+		in->seekg(streamPos - totalPos, std::ios::beg);
+		in->clear();
 	}
 
 	std::streampos CompoundInputFileStream::tellg()
 	{
-		if (isEof) return 0;
-		return totalPos + in.tellg();
+		if (in == nullptr) return 0;
+		in->clear();
+		return totalPos + in->tellg();
 	}
 
 	bool CompoundInputFileStream::eof()
 	{
-		return isEof;
+		return in == nullptr;
 	}
 
 	void CompoundInputFileStream::get(char& c)
 	{
-		if (isEof) c = '\n';
-		c = in.get();
-		if (in.eof())
+		if (in == nullptr) c = '\n';
+		c = in->get();
+		if (in->eof())
 		{
 			popFile();
 			c = '\n';
-			if (isEof) return;
+			if (in == nullptr) return;
 		}
 	}
 
 	void CompoundInputFileStream::read(char* buffer, unsigned size)
 	{
-		if (isEof) return;
-		in.read(buffer, size);
+		if (in == nullptr) return;
+		in->read(buffer, size);
 	}
 
 	bool CompoundInputFileStream::include(const std::string& aFileName)
 	{
-		if (in.is_open())
+		if (in != nullptr)
 		{
-			totalPos += in.tellg();
-			streamRestorationDataStack.push({ fileName, in.tellg(), in.peek() });
-			in.close();
+			totalPos += in->tellg();
+			streamRestorationDataStack.push({ fileName, in->tellg(), isFile });
+			delete in;
 		}
+		isFile = true;
 		fileName = aFileName;
-		in.open(fileName, std::ios::binary);
-		in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		identifier = fileName;
+		in = new std::ifstream(fileName, std::ios::binary);
+		in->exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
 		return true;
+	}
+
+	bool CompoundInputFileStream::pushString(const std::string& str)
+	{
+		if (in != nullptr)
+		{
+			totalPos += in->tellg();
+			streamRestorationDataStack.push({ fileName, in->tellg(), isFile });
+			delete in;
+		}
+		isFile = false;
+		fileName = str;
+		in = new std::istringstream(fileName, std::ios::binary);
+		in->exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+		return true;
+	}
+
+	bool CompoundInputFileStream::put(char c)
+	{
+		return pushString(std::string(1, c));
 	}
 
 	void CompoundInputFileStream::popFile()
@@ -95,15 +126,29 @@ namespace kasm
 			StreamRestorationData streamRestorationData = streamRestorationDataStack.top();
 			streamRestorationDataStack.pop();
 			totalPos -= streamRestorationData.position;
-			in.close();
+			delete in;
 			fileName = streamRestorationData.fileName;
-			in.open(fileName, std::ios::binary);
-			in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-			in.seekg(streamRestorationData.position, std::ios::beg);
+			isFile = streamRestorationData.isFile;
+			if (isFile)
+			{
+				identifier = fileName;
+				in = new std::ifstream(fileName, std::ios::binary);
+			}
+			else
+			{
+				in = new std::istringstream(fileName, std::ios::binary);
+			}
+			in->exceptions(std::ifstream::failbit | std::ifstream::badbit);
+			in->seekg(streamRestorationData.position, std::ios::beg);
 		}
 		else
 		{
-			isEof = true;
+			in = nullptr;
 		}
+	}
+
+	std::string& CompoundInputFileStream::getIdentifier()
+	{
+		return identifier;
 	}
 }
