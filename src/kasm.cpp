@@ -20,8 +20,7 @@ int main()
 	{
 		//compiler.compile("source.k", "source_asm.kasm");
 		//assembler.assemble("source_asm.kasm", "program.kexe");
-		assembler.assemble("source.kasm", "program.kexe");
-		//assembler.saveSymbolTable("program.ksym");
+		assembler.assemble("source.kasm", "program.kexe", "program.ksym");
 		//disassembler.disassemble("program.kexe", "d_source.kasm", "program.ksym");
 		//assembler.assemble("d_source.kasm", "program.kexe");
 		//virtualMachine.loadProgram("program.kexe");

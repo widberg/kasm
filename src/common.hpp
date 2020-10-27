@@ -3,6 +3,8 @@
 #include <climits>
 #include <cstdint>
 
+#include "debug.hpp"
+
 namespace kasm
 {
     const int INSTRUCTION_SIZE = sizeof(std::uint32_t);

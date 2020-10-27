@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(kasm
 	src/kasm.cpp
-	src/common.hpp
+	src/common.hpp src/debug.hpp
 	src/compoundInputFileStream.cpp src/compoundInputFileStream.hpp
 	src/assembler.hpp src/assembler.cpp src/assembler.yy src/assembler_util.cpp
 	src/binaryBuilder.hpp src/binaryBuilder.cpp

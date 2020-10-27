@@ -38,13 +38,15 @@ struct lexcontext;
 enum class CTXFlag
 {
 	None,
-	LINE_AS_STRING
+	LINE_AS_STRING,
+	BLOCK_AS_STRING,
+	ARGUMENT_LIST
 };
 
 struct lexcontext
 {
 	lexcontext(const std::string& aFileName)
-		: in(aFileName), flag(CTXFlag::None)
+		: in(aFileName), flag(CTXFlag::None), macroFunctionParamaters(nullptr)
 	{
 		loc.begin.filename = &in.getIdentifier();
 		loc.end.filename = &in.getIdentifier();
@@ -53,7 +55,10 @@ struct lexcontext
 	kasm::CompoundInputFileStream in;
 	yy::location loc;
 	kasm::Assembler* assembler;
+	std::vector<std::string>* macroFunctionParamaters;
+	std::vector<std::string> macroFunctionArguments;
 	CTXFlag flag;
+	std::unordered_map<std::string, unsigned int> macroFunctionLabels;
 };
 
 namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
@@ -149,15 +154,14 @@ union SplitWord
 #pragma pack(pop)
 };
 
-#define ASSEMBLER_ASSERT(condition, message) assert((condition) && message)
 #define GET_LOC() ctx.assembler->binary.getLocation()
 
 }//%code
 
 %token END_OF_FILE 0 END_OF_LINE
-%token IDENTIFIER LITERAL STRING REGISTER
+%token IDENTIFIER LITERAL STRING REGISTER ARGUMENT_LIST
 
-%token TEXT DATA WORD BYTE ASCII ASCIIZ ALIGN SPACE INCLUDE ERROR MESSAGE MACRO END DBG DEFINE
+%token TEXT DATA WORD BYTE ASCII ASCIIZ ALIGN SPACE INCLUDE ERROR MESSAGE MACRO DBG DEFINE DBGBP
 
 %token ADD ADDI ADDIU ADDU AND ANDI BEQ BGEZ BGEZAL BGTZ BLEZ BLTZ BLTZAL BNE
 %token DIV DIVU J JAL JR LB LUI LW MFHI MFLO MULT MULTU OR ORI SB SLL SLLV NOR
@@ -167,6 +171,7 @@ union SplitWord
 
 %type<std::string> IDENTIFIER STRING
 %type<std::uint32_t> LITERAL REGISTER
+%type<std::vector<std::string>> ARGUMENT_LIST identifier_list identifier_list_not_empty
 %type<std::vector<std::variant<std::uint32_t, kasm::AddressData>>> literal_list literal_argument
 %type<kasm::AddressData> address direct_address
 %type<std::uint32_t> statement
@@ -181,7 +186,7 @@ statement_list
 	;
 
 statement
-    : IDENTIFIER ':' statement { $$ = $3; ctx.assembler->defineLabel($1, $3); }
+    : IDENTIFIER ':' statement { $$ = $3; if (ctx.macroFunctionParamaters != nullptr) { ctx.macroFunctionLabels[$1]++; ctx.assembler->defineLabel($1 + std::to_string(ctx.macroFunctionLabels[$1]), $3); } else { ctx.assembler->defineLabel($1, $3); } }
 	| END_OF_LINE statement { $$ = $2; }
 	| END_OF_FILE { $$ = GET_LOC(); }
 	// Directives
@@ -258,18 +263,13 @@ statement
 		ctx.assembler->binary.pad($2);
 	}
 	| INCLUDE STRING end_of_statement { ctx.in.include($2); } statement { $$ = $5; }
-	| ERROR   STRING end_of_statement statement { $$ = $4; std::cout << "ERROR: " << $2 << std::endl; throw std::exception("Assembler user defined error"); }
-	| MESSAGE STRING end_of_statement statement { $$ = $4; std::cout << "MESSAGE: " << $2 << std::endl; }
-	| DBG     STRING end_of_statement statement { $$ = $4; ctx.in.pushString($2); }
+	| ERROR   STRING end_of_statement { std::cout << "ERROR: " << $2 << std::endl; throw std::exception("Assembler user defined error"); } statement { $$ = $5; }
+	| MESSAGE STRING end_of_statement { std::cout << "MESSAGE: " << $2 << std::endl; } statement { $$ = $5; }
+	| DBG     STRING end_of_statement { ctx.in.pushString($2); } statement { $$ = $5; }
+	| DBGBP          end_of_statement { KASM_BREAKPOINT(); } statement { $$ = $4; }
 	| DEFINE IDENTIFIER { ctx.flag = CTXFlag::LINE_AS_STRING; } STRING { ctx.flag = CTXFlag::None; ctx.assembler->defineMacro($2, $4); } end_of_statement statement { $$ = $7; }
-	| MACRO IDENTIFIER '(' identifier_list ')' statement_list END end_of_statement statement
-	{
-		$$ = $9;
-	}
-	| IDENTIFIER '(' argument_list ')' end_of_statement
-	{
-		$$ = GET_LOC();
-	}
+	| MACRO IDENTIFIER '(' identifier_list ')' END_OF_LINE { ctx.flag = CTXFlag::BLOCK_AS_STRING; } STRING { ctx.flag = CTXFlag::None; ctx.assembler->defineMacro($2, $4, $8); } end_of_statement statement { $$ = $11; }
+	| IDENTIFIER '(' { ctx.flag = CTXFlag::ARGUMENT_LIST; } ARGUMENT_LIST { ctx.flag = CTXFlag::None; } end_of_statement { ctx.in.pushString(ctx.assembler->macroFunctions[$1].body); ctx.macroFunctionParamaters = &ctx.assembler->macroFunctions[$1].paramaters; ctx.macroFunctionArguments = $4; } statement { $$ = $8; }
 
 	// Instructions
     | ADD    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(ADD, $2, $4, $6); }
@@ -380,18 +380,13 @@ literal_list
     ;
 
 identifier_list
-	: identifier_list IDENTIFIER
-	| %empty
+	: identifier_list_not_empty { $$ = $1; }
+	| %empty { $$ = std::vector<std::string>(); }
 	;
 
-argument_list
-	: IDENTIFIER
-	| LITERAL
-	| direct_address
-	| address
-	| STRING
-	| REGISTER
-	| %empty
+identifier_list_not_empty
+	: IDENTIFIER { $$ = { $1 }; }
+	| identifier_list ',' IDENTIFIER { $1.push_back($3); $$ = $1; }
 	;
 
 direct_address
@@ -477,7 +472,7 @@ const static std::unordered_map<char, char> ESCAPE_SEQUENCES = {
 	{ '\"', '\"' },
 };
 
-std::string lexStringLiteral(lexcontext& ctx)
+std::string lexStringLiteral(lexcontext& ctx, bool resolve = true)
 {
 	std::string str;
 
@@ -496,7 +491,7 @@ std::string lexStringLiteral(lexcontext& ctx)
 		
 		"\n" { throw std::exception("Unclosed string"); }
 
-		"\\"([abfnrtv]|"\\"|"\'"|"\"") { str.push_back(ESCAPE_SEQUENCES.at(yych)); continue; }
+		"\\"([abfnrtv]|"\\"|"\'"|"\"") { if (resolve) { str.push_back(ESCAPE_SEQUENCES.at(yych)); } else { str.push_back('\\'); str.push_back(yych); } continue; }
 		[^\\"\""] { str.push_back(yych); continue; }
 
 		"\"" { break; }
@@ -520,7 +515,7 @@ std::string lineAsString(lexcontext& ctx)
 		re2c:api:style = free-form;
 		re2c:define:YYCTYPE   = char;
 		re2c:define:YYPEEK    = "ctx.in.peek()";
-		re2c:define:YYSKIP    = "do { ctx.in.ignore(); if (ctx.in.eof()) throw std::exception(\"Unclosed string\"); } while(0);";
+		re2c:define:YYSKIP    = "do { ctx.in.ignore(); if (ctx.in.eof()) throw std::exception(\"Unclosed line as string\"); } while(0);";
 		re2c:define:YYBACKUP  = "mar = ctx.in.tellg();";
 		re2c:define:YYRESTORE = "ctx.in.seekg(mar);";
 		
@@ -531,6 +526,57 @@ std::string lineAsString(lexcontext& ctx)
 
 	ctx.in.put(c);
 	return str;
+}
+
+std::string blockAsString(lexcontext& ctx)
+{
+	std::string str;
+	
+	for (;;)
+	{
+		char c;
+		ctx.in.get(c);
+		str.push_back(c);
+		if (str.length() >= 4)
+		{
+			std::string eos = str.substr(str.length() - 4, 4);
+			for (char& c : eos)
+			{
+				c = std::tolower(c);
+			}
+			if (eos == ".end") break;
+		}
+	}
+
+	return str.substr(0, str.length() - 4);
+}
+
+std::vector<std::string> argumentList(lexcontext& ctx)
+{
+	std::string argument;
+	std::vector<std::string> arguments;
+	std::streampos mar;
+	bool empty = true;
+	for (;;)
+	{
+		%{ /* Begin re2c lexer */
+		re2c:yyfill:enable = 0;
+		re2c:flags:input = custom;
+		re2c:api:style = free-form;
+		re2c:define:YYCTYPE   = char;
+		re2c:define:YYPEEK    = "ctx.in.peek()";
+		re2c:define:YYSKIP    = "do { ctx.in.ignore(); if (ctx.in.eof()) throw std::exception(\"Unclosed argument list\"); } while(0);";
+		re2c:define:YYBACKUP  = "mar = ctx.in.tellg();";
+		re2c:define:YYRESTORE = "ctx.in.seekg(mar);";
+		
+		")" { if (!empty) { arguments.push_back(argument); } break; }
+		"\"" { arguments.push_back(std::string(1, '\"') + lexStringLiteral(ctx, false) + std::string(1, '\"')); }
+		"," { arguments.push_back(argument); argument = ""; continue; }
+		* { argument.push_back(yych); empty = false; continue; }
+		%}
+	}
+
+	return arguments;
 }
 
 yy::parser::symbol_type yy::yylex(lexcontext& ctx)
@@ -566,6 +612,12 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 	case CTXFlag::LINE_AS_STRING:
 		TOKENV(STRING, lineAsString(ctx));
 		break;
+	case CTXFlag::BLOCK_AS_STRING:
+		TOKENV(STRING, blockAsString(ctx));
+		break;
+	case CTXFlag::ARGUMENT_LIST:
+		TOKENV(ARGUMENT_LIST, argumentList(ctx));
+		break;
 	default:
 		break;
 	}
@@ -587,86 +639,86 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
         re2c:flags:tags = 1;
 
 		// Directives
-		".text"|".TEXT"       { TOKEN(TEXT); }
-		".data"|".DATA"       { TOKEN(DATA); }
-		".word"|".WORD"       { TOKEN(WORD); }
-		".byte"|".BYTE"       { TOKEN(BYTE); }
-		".ascii"|".ASCII"     { TOKEN(ASCII); }
-		".asciiz"|".ASCIIZ"   { TOKEN(ASCIIZ); }
-		".align"|".ALIGN"     { TOKEN(ALIGN); }
-		".space"|".SPACE"     { TOKEN(SPACE); }
-		".include"|".INCLUDE" { TOKEN(INCLUDE); }
-		".error"|".ERROR"     { TOKEN(ERROR); }
-		".message"|".MESSAGE" { TOKEN(MESSAGE); }
-		".macro"|".MACRO"     { TOKEN(MACRO); }
-		".end"|".END"         { TOKEN(END); }
-		".dbg"|".DBG"         { TOKEN(DBG); }
-		".define"|".DEFINE"   { TOKEN(DEFINE); }
+		'.text'       { TOKEN(TEXT); }
+		'.data'       { TOKEN(DATA); }
+		'.word'       { TOKEN(WORD); }
+		'.byte'       { TOKEN(BYTE); }
+		'.ascii'      { TOKEN(ASCII); }
+		'.asciiz'     { TOKEN(ASCIIZ); }
+		'.align'      { TOKEN(ALIGN); }
+		'.space'      { TOKEN(SPACE); }
+		'.include'    { TOKEN(INCLUDE); }
+		'.error'      { TOKEN(ERROR); }
+		'.message'    { TOKEN(MESSAGE); }
+		'.macro'      { TOKEN(MACRO); }
+		'.dbg'        { TOKEN(DBG); }
+		'.dbgbp'      { TOKEN(DBGBP); }
+		'.define'     { TOKEN(DEFINE); }
 
 		// Instructions
-		"add"|"ADD"           { TOKEN(ADD); }
-		"addi"|"ADDI"         { TOKEN(ADDI); }
-		"addiu"|"ADDIU"       { TOKEN(ADDIU); }
-		"addu"|"ADDU"         { TOKEN(ADDU); }
-		"and"|"AND"           { TOKEN(AND); }
-		"andi"|"ANDI"         { TOKEN(ANDI); }
-		"beq"|"BEQ"           { TOKEN(BEQ); }
-		"bgez"|"BGEZ"         { TOKEN(BGEZ); }
-		"bgezal"|"BGEZAL"     { TOKEN(BGEZAL); }
-		"bgtz"|"BGTZ"         { TOKEN(BGTZ); }
-		"blez"|"BLEZ"         { TOKEN(BLEZ); }
-		"bltz"|"BLTZ"         { TOKEN(BLTZ); }
-		"bltzal"|"BLTZAL"     { TOKEN(BLTZAL); }
-		"bne"|"BNE"           { TOKEN(BNE); }
-		"div"|"DIV"           { TOKEN(DIV); }
-		"divu"|"DIVU"         { TOKEN(DIVU); }
-		"j"|"J"               { TOKEN(J); }
-		"jal"|"JAL"           { TOKEN(JAL); }
-		"jr"|"JR"             { TOKEN(JR); }
-		"lb"|"LB"             { TOKEN(LB); }
-		"lui"|"LUI"           { TOKEN(LUI); }
-		"lw"|"LW"             { TOKEN(LW); }
-		"mfhi"|"MFHI"         { TOKEN(MFHI); }
-		"mflo"|"MFLO"         { TOKEN(MFLO); }
-		"mult"|"MULT"         { TOKEN(MULT); }
-		"multu"|"MULTU"       { TOKEN(MULTU); }
-		"or"|"OR"             { TOKEN(OR); }
-		"ori"|"ORI"           { TOKEN(ORI); }
-		"sb"|"SB"             { TOKEN(SB); }
-		"sll"|"SLL"           { TOKEN(SLL); }
-		"sllv"|"SLLV"         { TOKEN(SLLV); }
-		"slt"|"SLT"           { TOKEN(SLT); }
-		"slti"|"SLTI"         { TOKEN(SLTI); }
-		"sltiu"|"SLTIU"       { TOKEN(SLTIU); }
-		"sltu"|"SLTU"         { TOKEN(SLTU); }
-		"sra"|"SRA"           { TOKEN(SRA); }
-		"srl"|"SRL"           { TOKEN(SRL); }
-		"srlv"|"SRLV"         { TOKEN(SRLV); }
-		"sub"|"SUB"           { TOKEN(SUB); }
-		"subu"|"SUBU"         { TOKEN(SUBU); }
-		"sw"|"SW"             { TOKEN(SW); }
-		"sys"|"SYS"           { TOKEN(SYS); }
-		"xor"|"XOR"           { TOKEN(XOR); }
-		"xori"|"XORI"         { TOKEN(XORI); }
-		"jalr"|"JALR"         { TOKEN(JALR); }
-		"nor"|"NOR"           { TOKEN(NOR); }
+		'add'           { TOKEN(ADD); }
+		'addi'         { TOKEN(ADDI); }
+		'addiu'       { TOKEN(ADDIU); }
+		'addu'         { TOKEN(ADDU); }
+		'and'           { TOKEN(AND); }
+		'andi'         { TOKEN(ANDI); }
+		'beq'           { TOKEN(BEQ); }
+		'bgez'         { TOKEN(BGEZ); }
+		'bgezal'     { TOKEN(BGEZAL); }
+		'bgtz'         { TOKEN(BGTZ); }
+		'blez'         { TOKEN(BLEZ); }
+		'bltz'         { TOKEN(BLTZ); }
+		'bltzal'     { TOKEN(BLTZAL); }
+		'bne'           { TOKEN(BNE); }
+		'div'           { TOKEN(DIV); }
+		'divu'         { TOKEN(DIVU); }
+		'j'               { TOKEN(J); }
+		'jal'           { TOKEN(JAL); }
+		'jr'             { TOKEN(JR); }
+		'lb'             { TOKEN(LB); }
+		'lui'           { TOKEN(LUI); }
+		'lw'             { TOKEN(LW); }
+		'mfhi'         { TOKEN(MFHI); }
+		'mflo'         { TOKEN(MFLO); }
+		'mult'         { TOKEN(MULT); }
+		'multu'       { TOKEN(MULTU); }
+		'or'             { TOKEN(OR); }
+		'ori'           { TOKEN(ORI); }
+		'sb'             { TOKEN(SB); }
+		'sll'           { TOKEN(SLL); }
+		'sllv'         { TOKEN(SLLV); }
+		'slt'           { TOKEN(SLT); }
+		'slti'         { TOKEN(SLTI); }
+		'sltiu'       { TOKEN(SLTIU); }
+		'sltu'         { TOKEN(SLTU); }
+		'sra'           { TOKEN(SRA); }
+		'srl'           { TOKEN(SRL); }
+		'srlv'         { TOKEN(SRLV); }
+		'sub'           { TOKEN(SUB); }
+		'subu'         { TOKEN(SUBU); }
+		'sw'             { TOKEN(SW); }
+		'sys'           { TOKEN(SYS); }
+		'xor'           { TOKEN(XOR); }
+		'xori'         { TOKEN(XORI); }
+		'jalr'         { TOKEN(JALR); }
+		'nor'           { TOKEN(NOR); }
 
 		// Pseudoinstructions
-		"copy"|"COPY"         { TOKEN(COPY); }
-		"clr"|"CLR"           { TOKEN(CLR); }
-		"b"|"B"               { TOKEN(B); }
-		"bal"|"BAL"           { TOKEN(BAL); }
-		"bgt"|"BGT"           { TOKEN(BGT); }
-		"blt"|"BLT"           { TOKEN(BLT); }
-		"bge"|"BGE"           { TOKEN(BGE); }
-		"ble"|"BLE"           { TOKEN(BLE); }
-		"bgtu"|"BGTU"         { TOKEN(BGTU); }
-		"BEQZ"|"BEQZ"         { TOKEN(BEQZ); }
-		"rem"|"REM"           { TOKEN(REM); }
-		"li"|"LI"             { TOKEN(LI); }
-		"la"|"LA"             { TOKEN(LA); }
-		"nop"|"NOP"           { TOKEN(NOP); }
-		"not"|"NOT"           { TOKEN(NOT); }
+		'copy'         { TOKEN(COPY); }
+		'clr'           { TOKEN(CLR); }
+		'b'               { TOKEN(B); }
+		'bal'           { TOKEN(BAL); }
+		'bgt'           { TOKEN(BGT); }
+		'blt'           { TOKEN(BLT); }
+		'bge'           { TOKEN(BGE); }
+		'ble'           { TOKEN(BLE); }
+		'bgtu'         { TOKEN(BGTU); }
+		'BEQZ'         { TOKEN(BEQZ); }
+		'rem'           { TOKEN(REM); }
+		'li'             { TOKEN(LI); }
+		'la'             { TOKEN(LA); }
+		'nop'           { TOKEN(NOP); }
+		'not'           { TOKEN(NOT); }
 
 		// Identifier
 		@s [a-zA-Z_][a-zA-Z_0-9]* @e
@@ -677,10 +729,25 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 				ctx.in.pushString(ctx.assembler->macros[identifier]);
 				continue;
 			}
-			else
+			else if (ctx.macroFunctionParamaters != nullptr)
 			{
-				TOKENV(IDENTIFIER, identifier);
+				if (ctx.macroFunctionLabels.count(identifier))
+				{
+					TOKENV(IDENTIFIER, identifier + std::to_string(ctx.macroFunctionLabels[identifier]));
+				}
+				else
+				{
+					auto it = std::find(ctx.macroFunctionParamaters->begin(), ctx.macroFunctionParamaters->end(), identifier);
+					if (it != ctx.macroFunctionParamaters->end())
+					{
+						auto index = std::distance(ctx.macroFunctionParamaters->begin(), it);
+						ctx.in.pushString(ctx.macroFunctionArguments[index]);
+						continue;
+					}
+				}
 			}
+			
+			TOKENV(IDENTIFIER, identifier);
 		}
 
 		// Register
@@ -707,7 +774,7 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		// Single character operators
 		@s [:,+()] @e { return parser::symbol_type(parser::token_type(GET_CHAR()), ctx.loc); }
 
-		@s * @e { throw std::exception(std::string("Invalid character of value: " + std::to_string(GET_CHAR())).c_str()); }
+		* { throw std::exception(std::string("Invalid character of value: " + std::to_string(GET_CHAR())).c_str()); }
 		%}
 	}
 }
@@ -715,11 +782,15 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 void yy::parser::error(const location_type& l, const std::string& message)
 {
     std::cerr << l.begin.filename->c_str() << ':' << l.begin.line << ':' << l.begin.column << '-' << l.end.column << ": " << message << '\n';
+	char buffer[20];
+	ctx.in.read(buffer, 19);
+	buffer[19] = 0;
+	std::cerr << buffer << std::endl;
 }
 
 namespace kasm
 {
-    void Assembler::assemble(const std::string& asmPath, const std::string& programPath)
+    void Assembler::assemble(const std::string& asmPath, const std::string& programPath, const std::string& symbolTablePath)
     {
         labelLocations.clear();
         unresolvedAddressLocations.clear();
@@ -756,5 +827,10 @@ namespace kasm
         binary.setLocation(BinaryBuilder::END);
         binary.align(INSTRUCTION_SIZE);
 		binary.close();
+
+		if (!symbolTablePath.empty())
+		{
+			saveSymbolTable(symbolTablePath);
+		}
     }
 }

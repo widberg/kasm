@@ -94,4 +94,14 @@ namespace kasm
 
 		macros[name] = value;
 	}
+
+	void Assembler::defineMacro(const std::string& name, const std::vector<std::string>& paramaters, const std::string& body)
+	{
+		if (isIdentifierDefined(name))
+		{
+			throw std::exception(std::string("Redefined Identifier: " + name).c_str());
+		}
+
+		macroFunctions[name] = { paramaters, body };
+	}
 }

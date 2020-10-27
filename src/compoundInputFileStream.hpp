@@ -2,9 +2,11 @@
 
 #include <fstream>
 #include <istream>
-#include <stack>
+#include <list>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace kasm
 {
@@ -28,22 +30,29 @@ namespace kasm
 
 		std::string& getIdentifier();
 	private:
-		void popFile();
+		std::streampos tellgInternal() const;
+		void pushEntry(const std::string& entryName);
+		void debugPrint() const;
 
-		struct StreamRestorationData
+		struct FileData
 		{
-			std::string fileName;
-			std::streampos position;
-			bool isFile;
+			std::istream* stream;
+			std::streampos length;
+		};
+
+		struct FileEntry
+		{
+			FileData* file;
+			std::streampos start;
+			std::streampos end;
+			std::streampos offset;
 		};
 
 		std::istream* in;
-		std::string fileName;
-		std::streampos totalPos;
-		bool isFile;
-
 		std::string identifier;
 
-		std::stack<StreamRestorationData> streamRestorationDataStack;
+		std::unordered_map<std::string, FileData> files;
+		std::list<FileEntry> fileEntries;
+		std::list<FileEntry>::iterator it;
 	};
 }

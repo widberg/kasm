@@ -1,0 +1,23 @@
+.define SYS_READ_STRING 5
+.define SYS_PRINT_STRING 6
+
+.macro PRINT_STRING_ADDRESS(address)
+	li $v0, SYS_PRINT_STRING
+	la $a0, address
+	sys
+.end
+
+.macro PRINT_STRING(string)
+	.data
+string_address:
+	.asciiz string
+	.text
+	PRINT_ADDRESS(string_address)
+.end
+
+.macro READ_STRING(buffer_address, buffer_size)
+	li $v0, SYS_READ_STRING
+	la $a0, buffer_address
+	li $a1, buffer_size
+	sys
+.end

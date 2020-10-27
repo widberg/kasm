@@ -1,17 +1,32 @@
 	.define SYS_PRINT_STRING li $v0, 6
-	.message "Define works"
+	.macro PRINT_ADDRESS(address)
+		.text
+		SYS_PRINT_STRING
+		la $a0, address
+		sys
+	.end
+	.macro PRINT_STRING(string)
+		.data
+	string_address:
+		.asciiz string
+		.text
+		#PRINT_ADDRESS(string_address)
+		SYS_PRINT_STRING
+		la $a0, string_address
+		sys
+	.end
+	.macro READ_STRING(buffer_address, buffer_size)
+		li $v0, 5
+		la $a0, buffer_address
+		li $a1, buffer_size
+		sys
+	.end
 	.text
-	.message "test"
 main:
-	.message "About to expand"
-	SYS_PRINT_STRING        # bruh
-	.message "Expand works"
-	la $a0, bruh
-	sys
+	PRINT_STRING("bruh\n")
+	
 ask:
-	SYS_PRINT_STRING        # ask y/n
-	la $a0, prompt_a
-	sys
+	PRINT_STRING("Would you like to type something? (y/n): ")
 	li $v0, 3        # ans
 	sys
 
@@ -27,22 +42,13 @@ ask:
 	j ask
 
 yes:
-	SYS_PRINT_STRING
-	la $a0, prompt
-	sys
-	li $v0, 5
-	la $a0, msg
-	li $a1, 32
-	sys
-	SYS_PRINT_STRING
-	la $a0, msg
-	sys
+	PRINT_STRING("Type something\n> ")
+	READ_STRING(msg, 32)
+	PRINT_ADDRESS(msg)
 	j ask
 
 skip:
-	SYS_PRINT_STRING        # bye
-	la $a0, bye
-	sys
+	PRINT_STRING("Thank you for running this program.\n")
 	li $v0, 0   # systemCallType = EXIT
 	jal func  # func()
 	lw $a0, ret # exitCode = *ret
@@ -57,26 +63,11 @@ func:
 	jr $ra     # return
 
 	.data
-	# error occurs here
 ret:
 	.space 4   # reserve 1 word of space in memory
-
 msg:
 	#.byte ' ':32
 	.space 32
-
-bruh:
-	.asciiz "bruh\n"
-
-prompt_a:
-	.asciiz "Would you like to type something? (y/n): "
-
-prompt:
-	.asciiz "Type something\n> "
-
-bye:
-	.asciiz "Thank you for running this program.\n"
-
 some_trash:
 	.word 4
 	.byte 1

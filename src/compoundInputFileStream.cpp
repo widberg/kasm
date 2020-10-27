@@ -1,5 +1,9 @@
 #include "compoundInputFileStream.hpp"
 
+#include <iostream>
+
+#include "debug.hpp"
+
 namespace kasm
 {
 	CompoundInputFileStream::CompoundInputFileStream(const std::string& aFileName)
@@ -10,106 +14,111 @@ namespace kasm
 
 	CompoundInputFileStream::~CompoundInputFileStream()
 	{
-		delete in;
+		for (auto it = files.begin(); it != files.end(); it++)
+		{
+			delete it->second.stream;
+		}
 	}
 
 	char CompoundInputFileStream::peek()
 	{
-		if (in == nullptr) return '\n';
-		int c = in->peek();
-		if (c == -1)
-		{
-			c = '\n';
-		}
-		return c;
+		if (eof()) return '\0';
+		//std::cout << (char)(in->peek());
+		return in->peek();
 	}
 
 	void CompoundInputFileStream::ignore()
 	{
-		if (in == nullptr) return;
-		do
-		{
-			if (in->eof())
-			{
-				popFile();
-				if (in == nullptr) return;
-			}
-			in->ignore();
-		} while (in->eof());
+		if (eof()) return;
+		in->ignore();
 	}
 
 	void CompoundInputFileStream::seekg(const std::streampos& streamPos)
 	{
-		if (in == nullptr) return;
-		while (streamPos <= totalPos)
+		if (streamPos > fileEntries.back().end) throw std::exception("compound file stream attempting to seek past end of available input");
+		for (auto i = fileEntries.begin(); i != fileEntries.end(); i++)
 		{
-			popFile();
-			if (in == nullptr) return;
+			if (streamPos >= i->start && streamPos <= i->end)
+			{
+				it = i;
+				in = it->file->stream;
+				in->seekg(streamPos - it->start + it->offset, std::ios::beg);
+				break;
+			}
 		}
-		in->clear();
-		in->seekg(streamPos - totalPos, std::ios::beg);
-		in->clear();
+	}
+
+	std::streampos CompoundInputFileStream::tellgInternal() const
+	{
+		return it->start + in->tellg() - it->offset;
 	}
 
 	std::streampos CompoundInputFileStream::tellg()
 	{
-		if (in == nullptr) return 0;
-		in->clear();
-		return totalPos + in->tellg();
+		if (eof()) return std::numeric_limits<std::streampos>::max();
+		return tellgInternal();
 	}
 
 	bool CompoundInputFileStream::eof()
 	{
-		return in == nullptr;
+		if (in == nullptr) return true;
+		if (it == fileEntries.end()) return true;
+		ASSEMBLER_ASSERT(it->file->stream == in, "WEEE WOOO WEEE WOO");
+		while (in->peek() == std::istream::traits_type::eof() || tellgInternal() > it->end)
+		{
+			in->clear();
+			it++;
+			if (it == fileEntries.end())
+			{
+				in = nullptr;
+				return true;
+			}
+			in = it->file->stream;
+			in->seekg(it->offset, std::ios::beg);
+		}
+		return false;
 	}
 
 	void CompoundInputFileStream::get(char& c)
 	{
-		if (in == nullptr) c = '\n';
-		c = in->get();
-		if (in->eof())
-		{
-			popFile();
-			c = '\n';
-			if (in == nullptr) return;
-		}
+		if (eof()) return;
+		in->get(c);
 	}
 
 	void CompoundInputFileStream::read(char* buffer, unsigned size)
 	{
-		if (in == nullptr) return;
+		if (eof()) return;
 		in->read(buffer, size);
 	}
 
 	bool CompoundInputFileStream::include(const std::string& aFileName)
 	{
-		if (in != nullptr)
+
+		if (!files.count(aFileName))
 		{
-			totalPos += in->tellg();
-			streamRestorationDataStack.push({ fileName, in->tellg(), isFile });
-			delete in;
+			std::istream* tmpIn = new std::ifstream(aFileName, std::ios::binary | std::ios::ate);
+			tmpIn->exceptions(std::ifstream::failbit | std::ifstream::badbit);
+			std::streampos length = tmpIn->tellg();
+			tmpIn->seekg(0, std::ios::beg);
+			files[aFileName] = { tmpIn, length };
 		}
-		isFile = true;
-		fileName = aFileName;
-		identifier = fileName;
-		in = new std::ifstream(fileName, std::ios::binary);
-		in->exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+		identifier = aFileName;
+		pushEntry(aFileName);
 
 		return true;
 	}
 
 	bool CompoundInputFileStream::pushString(const std::string& str)
 	{
-		if (in != nullptr)
+		if (!files.count(str))
 		{
-			totalPos += in->tellg();
-			streamRestorationDataStack.push({ fileName, in->tellg(), isFile });
-			delete in;
+			std::istream* tmpIn = new std::istringstream(str, std::ios::binary);
+			tmpIn->exceptions(std::istringstream::failbit | std::istringstream::badbit);
+			files[str] = { tmpIn, std::streampos(str.length()) };
 		}
-		isFile = false;
-		fileName = str;
-		in = new std::istringstream(fileName, std::ios::binary);
-		in->exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+		pushEntry(str);
 
 		return true;
 	}
@@ -119,36 +128,83 @@ namespace kasm
 		return pushString(std::string(1, c));
 	}
 
-	void CompoundInputFileStream::popFile()
-	{
-		if (!streamRestorationDataStack.empty())
-		{
-			StreamRestorationData streamRestorationData = streamRestorationDataStack.top();
-			streamRestorationDataStack.pop();
-			totalPos -= streamRestorationData.position;
-			delete in;
-			fileName = streamRestorationData.fileName;
-			isFile = streamRestorationData.isFile;
-			if (isFile)
-			{
-				identifier = fileName;
-				in = new std::ifstream(fileName, std::ios::binary);
-			}
-			else
-			{
-				in = new std::istringstream(fileName, std::ios::binary);
-			}
-			in->exceptions(std::ifstream::failbit | std::ifstream::badbit);
-			in->seekg(streamRestorationData.position, std::ios::beg);
-		}
-		else
-		{
-			in = nullptr;
-		}
-	}
-
 	std::string& CompoundInputFileStream::getIdentifier()
 	{
 		return identifier;
+	}
+
+	void CompoundInputFileStream::pushEntry(const std::string& entryName)
+	{
+		FileData& file = files[entryName];
+
+		if (eof())
+		{
+			fileEntries.push_back({ &file, 0, file.length - std::streampos(1), 0 });
+			it = --fileEntries.end();
+		}
+		else
+		{
+			it->end = tellgInternal();
+			std::streampos start = it->end + std::streampos(1);
+			auto i = it;
+			i++;
+			fileEntries.insert(i, { &file, start, start + file.length - std::streampos(1), 0 });
+			fileEntries.insert(i, { it->file, start + file.length, start + file.length + it->file->length - (it->end - it->start + it->offset) - std::streampos(2), it->end - it->start + it->offset});
+			
+			for (; i != fileEntries.end(); i++)
+			{
+				i->start += file.length;
+				i->end += file.length;
+			}
+			it++;
+		}
+
+		in = it->file->stream;
+		in->seekg(it->offset);
+	}
+
+	void CompoundInputFileStream::debugPrint() const
+	{
+		std::cout << "Debug Print Begin:" << std::endl;
+		std::streampos cursor = tellgInternal();
+		for (auto i : fileEntries)
+		{
+			std::cout << (i.start == it->start ? "->" : "") << "[" << i.start << ", " << i.end << "]" << std::endl;
+			i.file->stream->clear();
+			std::streampos sav = i.file->stream->tellg();
+			i.file->stream->seekg(i.offset, std::ios::beg);
+			
+			if (cursor == 1295)
+			{
+				KASM_BREAKPOINT();
+			}
+			if (cursor >= i.start && cursor <= i.end)
+			{
+				std::streampos size = cursor - i.start;
+				std::string buffer;
+				buffer.resize(size);
+				i.file->stream->read(static_cast<char*>(buffer.data()), size);
+				std::cout << buffer;
+
+				std::cout << "[->]";
+
+				size = i.end - cursor + 1;
+				buffer.resize(size);
+				i.file->stream->read(static_cast<char*>(buffer.data()), size);
+				std::cout << buffer << std::endl;
+			}
+			else
+			{
+				std::streampos size = i.end - i.start + 1;
+				std::string buffer;
+				buffer.resize(size);
+				i.file->stream->read(static_cast<char*>(buffer.data()), size);
+				std::cout << buffer << std::endl;
+			}
+
+			i.file->stream->clear();
+			i.file->stream->seekg(sav, std::ios::beg);
+		}
+		std::cout << "Debug Print End;" << std::endl;
 	}
 }
