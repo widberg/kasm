@@ -6,9 +6,10 @@
 
 namespace kasm
 {
-	CompoundInputFileStream::CompoundInputFileStream(const std::string& aFileName)
-		: in(nullptr)
+	CompoundInputFileStream::CompoundInputFileStream(const std::string& aFileName, void(*aEOFCallback)(unsigned))
+		: in(nullptr), eoFCallback(aEOFCallback)
 	{
+		it = fileEntries.end();
 		include(aFileName);
 	}
 
@@ -59,20 +60,41 @@ namespace kasm
 		return tellgInternal();
 	}
 
-	bool CompoundInputFileStream::eof()
+	bool CompoundInputFileStream::eof(bool giveStub)
 	{
 		if (in == nullptr) return true;
 		if (it == fileEntries.end()) return true;
-		ASSEMBLER_ASSERT(it->file->stream == in, "WEEE WOOO WEEE WOO");
-		while (in->peek() == std::istream::traits_type::eof() || tellgInternal() > it->end)
+		bool isStub = it->file == nullptr;
+		KASM_ASSERT(it->file->stream == in, "WEEE WOOO WEEE WOO");
+		while (in->peek() == std::istream::traits_type::eof() || tellgInternal() > it->end || isStub)
 		{
 			in->clear();
+
+			if (!isStub && it->uid != 0)
+			{
+				auto i = it;
+				i++;
+				fileEntries.insert(i, { it->file, 0, 0, 0, it->uid });
+				it->uid = 0;
+				return false;
+			}
+
+			if (eoFCallback != nullptr && it->uid != 0)
+			{
+				eoFCallback(it->uid);
+			}
+
 			it++;
 			if (it == fileEntries.end())
 			{
 				in = nullptr;
 				return true;
 			}
+
+			isStub = it->file == nullptr;
+			if (giveStub && isStub && it->uid != 0) return false;
+			if (isStub) continue;
+
 			in = it->file->stream;
 			in->seekg(it->offset, std::ios::beg);
 		}
@@ -91,7 +113,7 @@ namespace kasm
 		in->read(buffer, size);
 	}
 
-	bool CompoundInputFileStream::include(const std::string& aFileName)
+	unsigned CompoundInputFileStream::include(const std::string& aFileName, bool setUid)
 	{
 
 		if (!files.count(aFileName))
@@ -104,12 +126,10 @@ namespace kasm
 		}
 
 		identifier = aFileName;
-		pushEntry(aFileName);
-
-		return true;
+		return pushEntry(aFileName, setUid);
 	}
 
-	bool CompoundInputFileStream::pushString(const std::string& str)
+	unsigned CompoundInputFileStream::pushString(const std::string& str, bool setUid)
 	{
 		if (!files.count(str))
 		{
@@ -118,12 +138,10 @@ namespace kasm
 			files[str] = { tmpIn, std::streampos(str.length()) };
 		}
 
-		pushEntry(str);
-
-		return true;
+		return pushEntry(str, setUid);
 	}
 
-	bool CompoundInputFileStream::put(char c)
+	unsigned CompoundInputFileStream::put(char c, bool setUid)
 	{
 		return pushString(std::string(1, c));
 	}
@@ -133,14 +151,20 @@ namespace kasm
 		return identifier;
 	}
 
-	void CompoundInputFileStream::pushEntry(const std::string& entryName)
+	unsigned CompoundInputFileStream::pushEntry(const std::string& entryName, bool setUid)
 	{
 		FileData& file = files[entryName];
 
-		if (eof())
+		unsigned newUid = 0;
+
+		if (setUid)
 		{
-			fileEntries.push_back({ &file, 0, file.length - std::streampos(1), 0 });
-			it = --fileEntries.end();
+			newUid = ++uid;
+		}
+
+		if (eof(true) || it->file == nullptr)
+		{
+			it = fileEntries.insert(it, { &file, 0, file.length - std::streampos(1), 0, newUid });
 		}
 		else
 		{
@@ -148,19 +172,22 @@ namespace kasm
 			std::streampos start = it->end + std::streampos(1);
 			auto i = it;
 			i++;
-			fileEntries.insert(i, { &file, start, start + file.length - std::streampos(1), 0 });
-			fileEntries.insert(i, { it->file, start + file.length, start + file.length + it->file->length - (it->end - it->start + it->offset) - std::streampos(2), it->end - it->start + it->offset});
+			fileEntries.insert(i, { &file, start, start + file.length - std::streampos(1), 0, newUid });
+			fileEntries.insert(i, { it->file, start + file.length, start + file.length + it->file->length - (it->end - it->start + it->offset) - std::streampos(2), it->end - it->start + it->offset, it->uid });
 			
 			for (; i != fileEntries.end(); i++)
 			{
 				i->start += file.length;
 				i->end += file.length;
 			}
+			it->uid = 0;
 			it++;
 		}
 
 		in = it->file->stream;
 		in->seekg(it->offset);
+
+		return it->uid;
 	}
 
 	void CompoundInputFileStream::debugPrint() const

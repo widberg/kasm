@@ -194,7 +194,7 @@ statement
 	| DATA end_of_statement { $$ = GET_LOC(); ctx.assembler->binary.setSegmentType(kasm::BinaryBuilder::SegmentType::DATA); }
     | WORD literal_argument end_of_statement
     {
-		ASSEMBLER_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "word must be in data segment");
+		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "word must be in data segment");
         ctx.assembler->binary.align(kasm::INSTRUCTION_SIZE);
         $$ = GET_LOC(); 
 		for (std::variant<std::uint32_t, kasm::AddressData> word : $2)
@@ -215,7 +215,7 @@ statement
     }
     | BYTE literal_argument end_of_statement
     {
-		ASSEMBLER_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "byte must be in data segment");
+		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "byte must be in data segment");
         $$ = GET_LOC(); 
 		for (std::variant<std::uint32_t, kasm::AddressData> byte : $2)
         {
@@ -235,19 +235,19 @@ statement
     }
     | ASCII STRING end_of_statement
 	{
-		ASSEMBLER_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "ascii must be in data segment");
+		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "ascii must be in data segment");
 		$$ = GET_LOC(); 
 		ctx.assembler->binary.writeString($2.c_str(), $2.size());
 	}
     | ASCIIZ STRING end_of_statement
 	{
-		ASSEMBLER_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "asciiz must be in data segment");
+		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "asciiz must be in data segment");
 		$$ = GET_LOC(); 
 		ctx.assembler->binary.writeString($2.c_str(), $2.size() + 1);
 	}
     | ALIGN LITERAL end_of_statement
     {
-		ASSEMBLER_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "align must be in data segment");
+		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "align must be in data segment");
         $$ = GET_LOC(); 
 		unsigned int alignment = 1;
         for (int i = 0; i < $2; i++)
@@ -258,7 +258,7 @@ statement
     }
     | SPACE LITERAL end_of_statement
 	{
-		ASSEMBLER_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "space must be in data segment");
+		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "space must be in data segment");
 		$$ = GET_LOC(); 
 		ctx.assembler->binary.pad($2);
 	}

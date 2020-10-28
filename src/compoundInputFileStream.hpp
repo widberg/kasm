@@ -13,25 +13,25 @@ namespace kasm
 	class CompoundInputFileStream
 	{
 	public:
-		CompoundInputFileStream(const std::string& aFileName);
+		CompoundInputFileStream(const std::string& aFileName, void(*aEoFCallback)(unsigned) = nullptr);
 		~CompoundInputFileStream();
 
 		char peek();
 		void ignore();
 		void seekg(const std::streampos& streamPos);
 		std::streampos tellg();
-		bool eof();
+		bool eof(bool giveStub = false);
 		void get(char& c);
 		void read(char* buffer, unsigned size);
 
-		bool include(const std::string& aFileName);
-		bool pushString(const std::string& str);
-		bool put(char c);
+		unsigned include(const std::string& aFileName, bool setUid = false);
+		unsigned pushString(const std::string& str, bool setUid = false);
+		unsigned put(char c, bool setUid = false);
 
 		std::string& getIdentifier();
 	private:
 		std::streampos tellgInternal() const;
-		void pushEntry(const std::string& entryName);
+		unsigned pushEntry(const std::string& entryName, bool setUid = false);
 		void debugPrint() const;
 
 		struct FileData
@@ -46,10 +46,13 @@ namespace kasm
 			std::streampos start;
 			std::streampos end;
 			std::streampos offset;
+			unsigned uid;
 		};
 
 		std::istream* in;
 		std::string identifier;
+		unsigned uid = 0;
+		void(*eoFCallback)(unsigned);
 
 		std::unordered_map<std::string, FileData> files;
 		std::list<FileEntry> fileEntries;
