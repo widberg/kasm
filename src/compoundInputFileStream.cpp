@@ -6,6 +6,12 @@
 
 namespace kasm
 {
+	CompoundInputFileStream::CompoundInputFileStream()
+		: in(nullptr), eoFCallback(nullptr)
+	{
+		it = fileEntries.end();
+	}
+
 	CompoundInputFileStream::CompoundInputFileStream(const std::string& aFileName, void(*aEOFCallback)(unsigned))
 		: in(nullptr), eoFCallback(aEOFCallback)
 	{

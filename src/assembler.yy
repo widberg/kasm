@@ -28,10 +28,7 @@
 
 #include "compoundInputFileStream.hpp"
 
-struct lexcontext;
 }//%code requires
-
-%param { lexcontext& ctx }
 
 %code
 {
@@ -43,25 +40,15 @@ enum class CTXFlag
 	ARGUMENT_LIST
 };
 
-struct lexcontext
-{
-	lexcontext(const std::string& aFileName)
-		: in(aFileName), flag(CTXFlag::None), macroFunctionParamaters(nullptr)
-	{
-		loc.begin.filename = &in.getIdentifier();
-		loc.end.filename = &in.getIdentifier();
-	};
+static kasm::CompoundInputFileStream in;
+static yy::location loc;
+static kasm::Assembler* assembler;
+static std::vector<std::string>* macroFunctionParamaters;
+static std::vector<std::string> macroFunctionArguments;
+static CTXFlag flag;
+static std::unordered_map<std::string, unsigned int> macroFunctionLabels;
 
-	kasm::CompoundInputFileStream in;
-	yy::location loc;
-	kasm::Assembler* assembler;
-	std::vector<std::string>* macroFunctionParamaters;
-	std::vector<std::string> macroFunctionArguments;
-	CTXFlag flag;
-	std::unordered_map<std::string, unsigned int> macroFunctionLabels;
-};
-
-namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
+namespace yy { parser::symbol_type yylex(); }
 
 #define INSTRUCTION_RRR(op, r0, r1, r2) {                           \
 	kasm::InstructionData instructionData;                          \
@@ -69,7 +56,7 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 	instructionData.register0 = r0;                                 \
 	instructionData.register1 = r1;                                 \
 	instructionData.register2 = r2;                                 \
-	ctx.assembler->binary.writeWord(instructionData.instruction); } \
+	assembler->binary.writeWord(instructionData.instruction); } \
 
 #define INSTRUCTION_RRL(op, r0, r1, l) {                            \
 	kasm::InstructionData instructionData;                          \
@@ -77,7 +64,7 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 	instructionData.register0 = r0;                                 \
 	instructionData.register1 = r1;                                 \
 	instructionData.immediate = l;                                  \
-	ctx.assembler->binary.writeWord(instructionData.instruction); } \
+	assembler->binary.writeWord(instructionData.instruction); } \
 
 #define INSTRUCTION_RRA(op, r0, r1, a, t) {                           \
 	kasm::InstructionData instructionData;                            \
@@ -87,22 +74,22 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 	a.type = kasm::AddressType::##t;                                  \
 	a.position = GET_LOC();                                           \
 	a.instructionData = instructionData;                              \
-	ctx.assembler->resolveAddress(a);                                 \
-	ctx.assembler->binary.writeWord(a.instructionData.instruction); } \
+	assembler->resolveAddress(a);                                 \
+	assembler->binary.writeWord(a.instructionData.instruction); } \
 
 #define INSTRUCTION_RR(op, r0, r1) {                                \
 	kasm::InstructionData instructionData;                          \
 	instructionData.opcode = kasm::Opcode::##op;                    \
 	instructionData.register0 = r0;                                 \
 	instructionData.register1 = r1;                                 \
-	ctx.assembler->binary.writeWord(instructionData.instruction); } \
+	assembler->binary.writeWord(instructionData.instruction); } \
 
 #define INSTRUCTION_RL(op, r0, l) {                                 \
 	kasm::InstructionData instructionData;                          \
 	instructionData.opcode = kasm::Opcode::##op;                    \
 	instructionData.register0 = r0;                                 \
 	instructionData.immediate = l;                                  \
-	ctx.assembler->binary.writeWord(instructionData.instruction); } \
+	assembler->binary.writeWord(instructionData.instruction); } \
 
 #define INSTRUCTION_RA(op, r0, a, t) {                                \
 	kasm::InstructionData instructionData;                            \
@@ -111,14 +98,14 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 	a.type = kasm::AddressType::##t;                                  \
 	a.position = GET_LOC();                                           \
 	a.instructionData = instructionData;                              \
-	ctx.assembler->resolveAddress(a);                                 \
-	ctx.assembler->binary.writeWord(a.instructionData.instruction); } \
+	assembler->resolveAddress(a);                                 \
+	assembler->binary.writeWord(a.instructionData.instruction); } \
 
 #define INSTRUCTION_R(op, r0) {                                     \
 	kasm::InstructionData instructionData;                          \
 	instructionData.opcode = kasm::Opcode::##op;                    \
 	instructionData.register0 = r0;                                 \
-	ctx.assembler->binary.writeWord(instructionData.instruction); } \
+	assembler->binary.writeWord(instructionData.instruction); } \
 
 #define INSTRUCTION_A(op, a, t) {                                     \
 	kasm::InstructionData instructionData;                            \
@@ -126,13 +113,13 @@ namespace yy { parser::symbol_type yylex(lexcontext& ctx); }
 	a.type = kasm::AddressType::##t;                                  \
 	a.position = GET_LOC();                                           \
 	a.instructionData = instructionData;                              \
-	ctx.assembler->resolveAddress(a);                                 \
-	ctx.assembler->binary.writeWord(a.instructionData.instruction); } \
+	assembler->resolveAddress(a);                                 \
+	assembler->binary.writeWord(a.instructionData.instruction); } \
 
 #define INSTRUCTION_O(op) {                                         \
 	kasm::InstructionData instructionData;                          \
 	instructionData.opcode = kasm::Opcode::##op;                    \
-	ctx.assembler->binary.writeWord(instructionData.instruction); } \
+	assembler->binary.writeWord(instructionData.instruction); } \
 
 union SplitWord
 {
@@ -154,7 +141,7 @@ union SplitWord
 #pragma pack(pop)
 };
 
-#define GET_LOC() ctx.assembler->binary.getLocation()
+#define GET_LOC() assembler->binary.getLocation()
 
 }//%code
 
@@ -186,16 +173,16 @@ statement_list
 	;
 
 statement
-    : IDENTIFIER ':' statement { $$ = $3; if (ctx.macroFunctionParamaters != nullptr) { ctx.macroFunctionLabels[$1]++; ctx.assembler->defineLabel($1 + std::to_string(ctx.macroFunctionLabels[$1]), $3); } else { ctx.assembler->defineLabel($1, $3); } }
+    : IDENTIFIER ':' statement { $$ = $3; if (macroFunctionParamaters != nullptr) { macroFunctionLabels[$1]++; assembler->defineLabel($1 + std::to_string(macroFunctionLabels[$1]), $3); } else { assembler->defineLabel($1, $3); } }
 	| END_OF_LINE statement { $$ = $2; }
 	| END_OF_FILE { $$ = GET_LOC(); }
 	// Directives
-	| TEXT end_of_statement { $$ = GET_LOC(); ctx.assembler->binary.setSegmentType(kasm::BinaryBuilder::SegmentType::TEXT); }
-	| DATA end_of_statement { $$ = GET_LOC(); ctx.assembler->binary.setSegmentType(kasm::BinaryBuilder::SegmentType::DATA); }
+	| TEXT end_of_statement { $$ = GET_LOC(); assembler->binary.setSegmentType(kasm::BinaryBuilder::SegmentType::TEXT); }
+	| DATA end_of_statement { $$ = GET_LOC(); assembler->binary.setSegmentType(kasm::BinaryBuilder::SegmentType::DATA); }
     | WORD literal_argument end_of_statement
     {
-		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "word must be in data segment");
-        ctx.assembler->binary.align(kasm::INSTRUCTION_SIZE);
+		KASM_ASSERT(assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "word must be in data segment");
+        assembler->binary.align(kasm::INSTRUCTION_SIZE);
         $$ = GET_LOC(); 
 		for (std::variant<std::uint32_t, kasm::AddressData> word : $2)
 		{
@@ -204,18 +191,18 @@ statement
 				kasm::AddressData addr = std::get<kasm::AddressData>(word);
 				addr.type = kasm::AddressType::DirectAddressAbsoluteWord;
 				addr.position = GET_LOC();
-				ctx.assembler->resolveAddress(addr);
-            	ctx.assembler->binary.writeWord(addr.instructionData.instruction);
+				assembler->resolveAddress(addr);
+            	assembler->binary.writeWord(addr.instructionData.instruction);
 			}
 			else
 			{
-            	ctx.assembler->binary.writeWord(std::get<std::uint32_t>(word));
+            	assembler->binary.writeWord(std::get<std::uint32_t>(word));
 			}
         }
     }
     | BYTE literal_argument end_of_statement
     {
-		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "byte must be in data segment");
+		KASM_ASSERT(assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "byte must be in data segment");
         $$ = GET_LOC(); 
 		for (std::variant<std::uint32_t, kasm::AddressData> byte : $2)
         {
@@ -224,52 +211,52 @@ statement
 				kasm::AddressData addr = std::get<kasm::AddressData>(byte);
 				addr.type = kasm::AddressType::DirectAddressAbsoluteByte;
 				addr.position = GET_LOC();
-				ctx.assembler->resolveAddress(addr);
-            	ctx.assembler->binary.writeByte(static_cast<std::uint8_t>(addr.instructionData.instruction));
+				assembler->resolveAddress(addr);
+            	assembler->binary.writeByte(static_cast<std::uint8_t>(addr.instructionData.instruction));
 			}
 			else
 			{
-            	ctx.assembler->binary.writeByte(static_cast<std::uint8_t>(std::get<std::uint32_t>(byte)));
+            	assembler->binary.writeByte(static_cast<std::uint8_t>(std::get<std::uint32_t>(byte)));
 			}
         }
     }
     | ASCII STRING end_of_statement
 	{
-		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "ascii must be in data segment");
+		KASM_ASSERT(assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "ascii must be in data segment");
 		$$ = GET_LOC(); 
-		ctx.assembler->binary.writeString($2.c_str(), $2.size());
+		assembler->binary.writeString($2.c_str(), $2.size());
 	}
     | ASCIIZ STRING end_of_statement
 	{
-		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "asciiz must be in data segment");
+		KASM_ASSERT(assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "asciiz must be in data segment");
 		$$ = GET_LOC(); 
-		ctx.assembler->binary.writeString($2.c_str(), $2.size() + 1);
+		assembler->binary.writeString($2.c_str(), $2.size() + 1);
 	}
     | ALIGN LITERAL end_of_statement
     {
-		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "align must be in data segment");
+		KASM_ASSERT(assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "align must be in data segment");
         $$ = GET_LOC(); 
 		unsigned int alignment = 1;
         for (int i = 0; i < $2; i++)
         {
             alignment *= 2;
         }
-        ctx.assembler->binary.align(alignment);
+        assembler->binary.align(alignment);
     }
     | SPACE LITERAL end_of_statement
 	{
-		KASM_ASSERT(ctx.assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "space must be in data segment");
+		KASM_ASSERT(assembler->binary.getSegmentType() == kasm::BinaryBuilder::SegmentType::DATA, "space must be in data segment");
 		$$ = GET_LOC(); 
-		ctx.assembler->binary.pad($2);
+		assembler->binary.pad($2);
 	}
-	| INCLUDE STRING end_of_statement { ctx.in.include($2); } statement { $$ = $5; }
+	| INCLUDE STRING end_of_statement { in.include($2); } statement { $$ = $5; }
 	| ERROR   STRING end_of_statement { std::cout << "ERROR: " << $2 << std::endl; throw std::exception("Assembler user defined error"); } statement { $$ = $5; }
 	| MESSAGE STRING end_of_statement { std::cout << "MESSAGE: " << $2 << std::endl; } statement { $$ = $5; }
-	| DBG     STRING end_of_statement { ctx.in.pushString($2); } statement { $$ = $5; }
+	| DBG     STRING end_of_statement { in.pushString($2); } statement { $$ = $5; }
 	| DBGBP          end_of_statement { KASM_BREAKPOINT(); } statement { $$ = $4; }
-	| DEFINE IDENTIFIER { ctx.flag = CTXFlag::LINE_AS_STRING; } STRING { ctx.flag = CTXFlag::None; ctx.assembler->defineMacro($2, $4); } end_of_statement statement { $$ = $7; }
-	| MACRO IDENTIFIER '(' identifier_list ')' END_OF_LINE { ctx.flag = CTXFlag::BLOCK_AS_STRING; } STRING { ctx.flag = CTXFlag::None; ctx.assembler->defineMacro($2, $4, $8); } end_of_statement statement { $$ = $11; }
-	| IDENTIFIER '(' { ctx.flag = CTXFlag::ARGUMENT_LIST; } ARGUMENT_LIST { ctx.flag = CTXFlag::None; } end_of_statement { ctx.in.pushString(ctx.assembler->macroFunctions[$1].body); ctx.macroFunctionParamaters = &ctx.assembler->macroFunctions[$1].paramaters; ctx.macroFunctionArguments = $4; } statement { $$ = $8; }
+	| DEFINE IDENTIFIER { flag = CTXFlag::LINE_AS_STRING; } STRING { flag = CTXFlag::None; assembler->defineMacro($2, $4); } end_of_statement statement { $$ = $7; }
+	| MACRO IDENTIFIER '(' identifier_list ')' END_OF_LINE { flag = CTXFlag::BLOCK_AS_STRING; } STRING { flag = CTXFlag::None; assembler->defineMacro($2, $4, $8); } end_of_statement statement { $$ = $11; }
+	| IDENTIFIER '(' { flag = CTXFlag::ARGUMENT_LIST; } ARGUMENT_LIST { flag = CTXFlag::None; } end_of_statement { in.pushString(assembler->macroFunctions[$1].body); macroFunctionParamaters = &assembler->macroFunctions[$1].paramaters; macroFunctionArguments = $4; } statement { $$ = $8; }
 
 	// Instructions
     | ADD    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(ADD, $2, $4, $6); }
@@ -359,7 +346,7 @@ statement
 		$4.type = kasm::AddressType::DirectAddressAbsoluteLoad;
 		$4.reg = $2;
 		$4.position = GET_LOC();
-		ctx.assembler->resolveAddress($4);
+		assembler->resolveAddress($4);
 		SplitWord l = { $4.instructionData.instruction };
 		INSTRUCTION_RL(LUI, $2, l.hi);
 		INSTRUCTION_RRL(ORI, $2, $2, l.lo);
@@ -472,7 +459,7 @@ const static std::unordered_map<char, char> ESCAPE_SEQUENCES = {
 	{ '\"', '\"' },
 };
 
-std::string lexStringLiteral(lexcontext& ctx, bool resolve = true)
+std::string lexStringLiteral(bool resolve = true)
 {
 	std::string str;
 
@@ -484,10 +471,10 @@ std::string lexStringLiteral(lexcontext& ctx, bool resolve = true)
 		re2c:flags:input = custom;
 		re2c:api:style = free-form;
 		re2c:define:YYCTYPE   = char;
-		re2c:define:YYPEEK    = "ctx.in.peek()";
-		re2c:define:YYSKIP    = "do { ctx.in.ignore(); if (ctx.in.eof()) throw std::exception(\"Unclosed string\"); } while(0);";
-		re2c:define:YYBACKUP  = "mar = ctx.in.tellg();";
-		re2c:define:YYRESTORE = "ctx.in.seekg(mar);";
+		re2c:define:YYPEEK    = "in.peek()";
+		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::exception(\"Unclosed string\"); } while(0);";
+		re2c:define:YYBACKUP  = "mar = in.tellg();";
+		re2c:define:YYRESTORE = "in.seekg(mar);";
 		
 		"\n" { throw std::exception("Unclosed string"); }
 
@@ -502,7 +489,7 @@ std::string lexStringLiteral(lexcontext& ctx, bool resolve = true)
 	return str;
 }
 
-std::string lineAsString(lexcontext& ctx)
+std::string lineAsString()
 {
 	std::string str;
 	char c;
@@ -514,28 +501,28 @@ std::string lineAsString(lexcontext& ctx)
 		re2c:flags:input = custom;
 		re2c:api:style = free-form;
 		re2c:define:YYCTYPE   = char;
-		re2c:define:YYPEEK    = "ctx.in.peek()";
-		re2c:define:YYSKIP    = "do { ctx.in.ignore(); if (ctx.in.eof()) throw std::exception(\"Unclosed line as string\"); } while(0);";
-		re2c:define:YYBACKUP  = "mar = ctx.in.tellg();";
-		re2c:define:YYRESTORE = "ctx.in.seekg(mar);";
+		re2c:define:YYPEEK    = "in.peek()";
+		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::exception(\"Unclosed line as string\"); } while(0);";
+		re2c:define:YYBACKUP  = "mar = in.tellg();";
+		re2c:define:YYRESTORE = "in.seekg(mar);";
 		
 		[\x00]|"#"|[\n\r] { c = yych; break; }
 		* { str.push_back(yych); continue; }
 		%}
 	}
 
-	ctx.in.put(c);
+	in.put(c);
 	return str;
 }
 
-std::string blockAsString(lexcontext& ctx)
+std::string blockAsString()
 {
 	std::string str;
 	
 	for (;;)
 	{
 		char c;
-		ctx.in.get(c);
+		in.get(c);
 		str.push_back(c);
 		if (str.length() >= 4)
 		{
@@ -551,7 +538,7 @@ std::string blockAsString(lexcontext& ctx)
 	return str.substr(0, str.length() - 4);
 }
 
-std::vector<std::string> argumentList(lexcontext& ctx)
+std::vector<std::string> argumentList()
 {
 	std::string argument;
 	std::vector<std::string> arguments;
@@ -564,13 +551,13 @@ std::vector<std::string> argumentList(lexcontext& ctx)
 		re2c:flags:input = custom;
 		re2c:api:style = free-form;
 		re2c:define:YYCTYPE   = char;
-		re2c:define:YYPEEK    = "ctx.in.peek()";
-		re2c:define:YYSKIP    = "do { ctx.in.ignore(); if (ctx.in.eof()) throw std::exception(\"Unclosed argument list\"); } while(0);";
-		re2c:define:YYBACKUP  = "mar = ctx.in.tellg();";
-		re2c:define:YYRESTORE = "ctx.in.seekg(mar);";
+		re2c:define:YYPEEK    = "in.peek()";
+		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::exception(\"Unclosed argument list\"); } while(0);";
+		re2c:define:YYBACKUP  = "mar = in.tellg();";
+		re2c:define:YYRESTORE = "in.seekg(mar);";
 		
 		")" { if (!empty) { arguments.push_back(argument); } break; }
-		"\"" { arguments.push_back(std::string(1, '\"') + lexStringLiteral(ctx, false) + std::string(1, '\"')); }
+		"\"" { arguments.push_back(std::string(1, '\"') + lexStringLiteral(false) + std::string(1, '\"')); }
 		"," { arguments.push_back(argument); argument = ""; continue; }
 		* { argument.push_back(yych); empty = false; continue; }
 		%}
@@ -579,7 +566,7 @@ std::vector<std::string> argumentList(lexcontext& ctx)
 	return arguments;
 }
 
-yy::parser::symbol_type yy::yylex(lexcontext& ctx)
+yy::parser::symbol_type yy::yylex()
 {
     std::streampos mar, s, e;
     /*!stags:re2c format = 'std::streampos @@;'; */
@@ -602,21 +589,21 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		return c;
 	};
 
-#define GET_STRING() getString(ctx.in, s, e)
-#define GET_CHAR() getChar(ctx.in, s, e)
-#define TOKEN(name) do { return parser::make_##name(ctx.loc); } while(0)
-#define TOKENV(name, ...) do { return parser::make_##name(__VA_ARGS__, ctx.loc); } while(0)
+#define GET_STRING() getString(in, s, e)
+#define GET_CHAR() getChar(in, s, e)
+#define TOKEN(name) do { return parser::make_##name(loc); } while(0)
+#define TOKENV(name, ...) do { return parser::make_##name(__VA_ARGS__, loc); } while(0)
 
-	switch (ctx.flag)
+	switch (flag)
 	{
 	case CTXFlag::LINE_AS_STRING:
-		TOKENV(STRING, lineAsString(ctx));
+		TOKENV(STRING, lineAsString());
 		break;
 	case CTXFlag::BLOCK_AS_STRING:
-		TOKENV(STRING, blockAsString(ctx));
+		TOKENV(STRING, blockAsString());
 		break;
 	case CTXFlag::ARGUMENT_LIST:
-		TOKENV(ARGUMENT_LIST, argumentList(ctx));
+		TOKENV(ARGUMENT_LIST, argumentList());
 		break;
 	default:
 		break;
@@ -629,11 +616,11 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		re2c:flags:input = custom;
 		re2c:api:style = free-form;
 		re2c:define:YYCTYPE      = char;
-		re2c:define:YYPEEK       = "ctx.in.peek()";
-		re2c:define:YYSKIP       = "do { ctx.in.ignore(); if (ctx.in.eof()) TOKEN(END_OF_FILE); } while(0);";
-		re2c:define:YYBACKUP     = "mar = ctx.in.tellg();";
-		re2c:define:YYRESTORE    = "ctx.in.seekg(mar);";
-		re2c:define:YYSTAGP      = "@@{tag} = ctx.in.eof() ? 0 : ctx.in.tellg();";
+		re2c:define:YYPEEK       = "in.peek()";
+		re2c:define:YYSKIP       = "do { in.ignore(); if (in.eof()) TOKEN(END_OF_FILE); } while(0);";
+		re2c:define:YYBACKUP     = "mar = in.tellg();";
+		re2c:define:YYRESTORE    = "in.seekg(mar);";
+		re2c:define:YYSTAGP      = "@@{tag} = in.eof() ? 0 : in.tellg();";
 		re2c:define:YYSTAGN      = "@@{tag} = 0;";
 		re2c:define:YYSHIFTSTAG  = "@@{tag} += @@{shift};";
         re2c:flags:tags = 1;
@@ -724,24 +711,24 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		@s [a-zA-Z_][a-zA-Z_0-9]* @e
 		{
 			std::string identifier = GET_STRING();
-			if (ctx.assembler->macros.count(identifier))
+			if (assembler->macros.count(identifier))
 			{
-				ctx.in.pushString(ctx.assembler->macros[identifier]);
+				in.pushString(assembler->macros[identifier]);
 				continue;
 			}
-			else if (ctx.macroFunctionParamaters != nullptr)
+			else if (macroFunctionParamaters != nullptr)
 			{
-				if (ctx.macroFunctionLabels.count(identifier))
+				if (macroFunctionLabels.count(identifier))
 				{
-					TOKENV(IDENTIFIER, identifier + std::to_string(ctx.macroFunctionLabels[identifier]));
+					TOKENV(IDENTIFIER, identifier + std::to_string(macroFunctionLabels[identifier]));
 				}
 				else
 				{
-					auto it = std::find(ctx.macroFunctionParamaters->begin(), ctx.macroFunctionParamaters->end(), identifier);
-					if (it != ctx.macroFunctionParamaters->end())
+					auto it = std::find(macroFunctionParamaters->begin(), macroFunctionParamaters->end(), identifier);
+					if (it != macroFunctionParamaters->end())
 					{
-						auto index = std::distance(ctx.macroFunctionParamaters->begin(), it);
-						ctx.in.pushString(ctx.macroFunctionArguments[index]);
+						auto index = std::distance(macroFunctionParamaters->begin(), it);
+						in.pushString(macroFunctionArguments[index]);
 						continue;
 					}
 				}
@@ -762,17 +749,17 @@ yy::parser::symbol_type yy::yylex(lexcontext& ctx)
 		"'" @s [^\\"\'"]"'" @e { TOKENV(LITERAL, GET_CHAR()); }
 
 		// String
-		"\""                   { TOKENV(STRING, lexStringLiteral(ctx)); }
+		"\""                   { TOKENV(STRING, lexStringLiteral()); }
 
 		// Whitespace
-		"\r\n"|[\r\n]          { ctx.loc.lines(); ctx.loc.step(); TOKEN(END_OF_LINE); }
-		[ \t\v\b\f]            { ctx.loc.columns(); continue; }
+		"\r\n"|[\r\n]          { loc.lines(); loc.step(); TOKEN(END_OF_LINE); }
+		[ \t\v\b\f]            { loc.columns(); continue; }
 
 		// Comment
 		@s "#"[^\r\n]* @e { continue; }
 
 		// Single character operators
-		@s [:,+()] @e { return parser::symbol_type(parser::token_type(GET_CHAR()), ctx.loc); }
+		@s [:,+()] @e { return parser::symbol_type(parser::token_type(GET_CHAR()), loc); }
 
 		* { throw std::exception(std::string("Invalid character of value: " + std::to_string(GET_CHAR())).c_str()); }
 		%}
@@ -783,7 +770,7 @@ void yy::parser::error(const location_type& l, const std::string& message)
 {
     std::cerr << l.begin.filename->c_str() << ':' << l.begin.line << ':' << l.begin.column << '-' << l.end.column << ": " << message << '\n';
 	char buffer[20];
-	ctx.in.read(buffer, 19);
+	in.read(buffer, 19);
 	buffer[19] = 0;
 	std::cerr << buffer << std::endl;
 }
@@ -794,12 +781,20 @@ namespace kasm
     {
         labelLocations.clear();
         unresolvedAddressLocations.clear();
+		macros.clear();
+		macroFunctions.clear();
 
-        lexcontext ctx(asmPath);
+		in.include(asmPath);
+		flag = CTXFlag::None;
+		macroFunctionParamaters = nullptr;
+
+		loc.begin.filename = &in.getIdentifier();
+		loc.end.filename = &in.getIdentifier();
+
 		binary.open(programPath);
 
-		ctx.assembler = this;
-        yy::parser parser(ctx);
+		assembler = this;
+        yy::parser parser;
         parser.parse();
 
         for (AddressData unresolvedAddressLocation : unresolvedAddressLocations)

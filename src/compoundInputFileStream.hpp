@@ -13,6 +13,7 @@ namespace kasm
 	class CompoundInputFileStream
 	{
 	public:
+		CompoundInputFileStream();
 		CompoundInputFileStream(const std::string& aFileName, void(*aEoFCallback)(unsigned) = nullptr);
 		~CompoundInputFileStream();
 
