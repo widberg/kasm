@@ -1,11 +1,11 @@
 	.text
 _00000000:
-main: ori $v0, $zero, 0x0006
+     main: ori $v0, $zero, 0x0006
 _00000004: lui $a0, 0x1001
 _00000008: ori $a0, $a0, 0x0000
 _0000000c: sys 
 _00000010:
-ask: ori $v0, $zero, 0x0006
+      ask: ori $v0, $zero, 0x0006
 _00000014: lui $a0, 0x1001
 _00000018: ori $a0, $a0, 0x0000
 _0000001c: sys 
@@ -21,7 +21,7 @@ _00000040: ori $at, $zero, 0x0059
 _00000044: beq $a0, $at, yes
 _00000048: j ask
 _0000004c:
-yes: ori $v0, $zero, 0x0006
+      yes: ori $v0, $zero, 0x0006
 _00000050: lui $a0, 0x1001
 _00000054: ori $a0, $a0, 0x0000
 _00000058: sys 
@@ -36,20 +36,19 @@ _00000078: ori $a0, $a0, 0x006b
 _0000007c: sys 
 _00000080: j ask
 _00000084:
-skip: ori $v0, $zero, 0x0006
+     skip: ori $v0, $zero, 0x0006
 _00000088: lui $a0, 0x1001
 _0000008c: ori $a0, $a0, 0x0000
 _00000090: sys 
 _00000094: ori $v0, $zero, 0x0000
-.dbgbp
 _00000098: jal func
-_0000009c: lw $a0, _10010064+3
+_0000009c: lw $a0, ret
 _000000a0: ori $t0, $zero, 0x0001
 _000000a4: add $a0, $a0, $t0
-_000000a8: sys 
+_000000a8: sys
 _000000ac:
-func: ori $t0, $zero, 0x0002
-_000000b0: sw $t0, _10010064+3
+     func: ori $t0, $zero, 0x0002
+_000000b0: sw $t0, ret
 _000000b4: jr $ra
 	.data
 _10010000:
@@ -97,12 +96,12 @@ _10010064: .byte 0x2e
 _10010065: .byte 0x0a
 _10010066: .byte 0x00
 _10010067:
-ret: .byte 0x00
+      ret: .byte 0x00
 _10010068: .byte 0x00
 _10010069: .byte 0x00
 _1001006a: .byte 0x00
 _1001006b:
-msg: .byte 0x00
+      msg: .byte 0x00
 _1001006c: .word 0x00000000
 _10010070: .word 0x00000000
 _10010074: .word 0x00000000

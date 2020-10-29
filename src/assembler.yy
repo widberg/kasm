@@ -186,7 +186,18 @@ statement_list
 	;
 
 statement
-    : IDENTIFIER ':' { wasExpandingMacro = macroCallStack.empty(); } statement { $$ = $4; if (!wasExpandingMacro) { macroFunctionLabels[$1]++; assembler->defineLabel($1 + std::to_string(macroFunctionLabels[$1]), $4); } else { assembler->defineLabel($1, $4); } }
+    : IDENTIFIER ':' { wasExpandingMacro = !macroCallStack.empty(); } statement
+	{
+		$$ = $4;
+		if (wasExpandingMacro)
+		{
+			assembler->defineLabel($1 + std::to_string(macroFunctionLabels[$1]++), $4);
+		}
+		else
+		{
+			assembler->defineLabel($1, $4);
+		}
+	}
 	| END_OF_LINE statement { $$ = $2; }
 	| END_OF_FILE { $$ = GET_LOC(); }
 	// Directives
@@ -849,7 +860,7 @@ namespace kasm
 
 		assembler = this;
         yy::parser parser;
-        parser.parse();
+        if (!parser.parse()) return;
 
         for (AddressData unresolvedAddressLocation : unresolvedAddressLocations)
         {

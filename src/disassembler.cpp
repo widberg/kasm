@@ -152,11 +152,19 @@ namespace kasm
 			}
 			if (instructionFormat & IDA)
 			{
-				std::uint32_t offset = (d.directAddressOffset + pc) % INSTRUCTION_SIZE;
-				asmFile << getLabelFromAddress(d.directAddressOffset + DATA_SEGMENT_OFFSET - offset + pc);
-				if (offset)
+				std::uint32_t absoluteAddress = d.directAddressOffset + DATA_SEGMENT_OFFSET + pc;
+				if (symbolTable.count(absoluteAddress))
 				{
-					asmFile << "+" << offset;
+					asmFile << getLabelFromAddress(absoluteAddress);
+				}
+				else
+				{
+					std::uint32_t offset = (d.directAddressOffset + pc) % INSTRUCTION_SIZE;
+					asmFile << getLabelFromAddress(absoluteAddress - offset);
+					if (offset)
+					{
+						asmFile << "+" << offset;
+					}
 				}
 				if (d.register1)
 				{

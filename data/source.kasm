@@ -26,6 +26,7 @@ main:
 	PRINT_STRING("bruh\n")
 	
 ask:
+	.dbgbp
 	PRINT_STRING("Would you like to type something? (y/n): ")
 	li $v0, 3        # ans
 	sys
