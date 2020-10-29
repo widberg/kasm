@@ -40,13 +40,26 @@ enum class CTXFlag
 	ARGUMENT_LIST
 };
 
+struct MacroCall
+{
+	unsigned uid;
+	const std::vector<std::string>* paramaters;
+	std::vector<std::string> arguments;
+};
+
 static kasm::CompoundInputFileStream in;
 static yy::location loc;
 static kasm::Assembler* assembler;
-static std::vector<std::string>* macroFunctionParamaters;
-static std::vector<std::string> macroFunctionArguments;
 static CTXFlag flag;
 static std::unordered_map<std::string, unsigned int> macroFunctionLabels;
+static std::vector<MacroCall> macroCallStack;
+static bool wasExpandingMacro;
+
+void eofCallback(unsigned uid)
+{
+	KASM_ASSERT(uid == macroCallStack.back().uid, "Stack order got fucked");
+	macroCallStack.pop_back();
+}
 
 namespace yy { parser::symbol_type yylex(); }
 
@@ -173,7 +186,7 @@ statement_list
 	;
 
 statement
-    : IDENTIFIER ':' statement { $$ = $3; if (macroFunctionParamaters != nullptr) { macroFunctionLabels[$1]++; assembler->defineLabel($1 + std::to_string(macroFunctionLabels[$1]), $3); } else { assembler->defineLabel($1, $3); } }
+    : IDENTIFIER ':' { wasExpandingMacro = macroCallStack.empty(); } statement { $$ = $4; if (!wasExpandingMacro) { macroFunctionLabels[$1]++; assembler->defineLabel($1 + std::to_string(macroFunctionLabels[$1]), $4); } else { assembler->defineLabel($1, $4); } }
 	| END_OF_LINE statement { $$ = $2; }
 	| END_OF_FILE { $$ = GET_LOC(); }
 	// Directives
@@ -256,7 +269,7 @@ statement
 	| DBGBP          end_of_statement { KASM_BREAKPOINT(); } statement { $$ = $4; }
 	| DEFINE IDENTIFIER { flag = CTXFlag::LINE_AS_STRING; } STRING { flag = CTXFlag::None; assembler->defineMacro($2, $4); } end_of_statement statement { $$ = $7; }
 	| MACRO IDENTIFIER '(' identifier_list ')' END_OF_LINE { flag = CTXFlag::BLOCK_AS_STRING; } STRING { flag = CTXFlag::None; assembler->defineMacro($2, $4, $8); } end_of_statement statement { $$ = $11; }
-	| IDENTIFIER '(' { flag = CTXFlag::ARGUMENT_LIST; } ARGUMENT_LIST { flag = CTXFlag::None; } end_of_statement { in.pushString(assembler->macroFunctions[$1].body); macroFunctionParamaters = &assembler->macroFunctions[$1].paramaters; macroFunctionArguments = $4; } statement { $$ = $8; }
+	| IDENTIFIER '(' { flag = CTXFlag::ARGUMENT_LIST; } ARGUMENT_LIST { flag = CTXFlag::None; } end_of_statement { macroCallStack.push_back({in.pushString(assembler->macroFunctions[$1].body, true), &assembler->macroFunctions[$1].paramaters, $4}); } statement { $$ = $8; }
 
 	// Instructions
     | ADD    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(ADD, $2, $4, $6); }
@@ -538,11 +551,33 @@ std::string blockAsString()
 	return str.substr(0, str.length() - 4);
 }
 
+std::string getString(std::streampos start, std::streampos end)
+{
+	std::string buffer;
+	buffer.resize(end - start);
+	in.seekg(start);
+	in.read(buffer.data(), end - start);
+	return buffer;
+}
+
+char getChar(std::streampos start, std::streampos end)
+{
+	in.seekg(start);
+	char c;
+	in.get(c);
+	in.seekg(end);
+	return c;
+}
+
+#define GET_STRING() getString(s, e)
+#define GET_CHAR() getChar(s, e)
+
 std::vector<std::string> argumentList()
 {
 	std::string argument;
 	std::vector<std::string> arguments;
-	std::streampos mar;
+	std::streampos mar, s, e;
+	/*!stags:re2c format = 'std::streampos @@;'; */
 	bool empty = true;
 	for (;;)
 	{
@@ -555,9 +590,46 @@ std::vector<std::string> argumentList()
 		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::exception(\"Unclosed argument list\"); } while(0);";
 		re2c:define:YYBACKUP  = "mar = in.tellg();";
 		re2c:define:YYRESTORE = "in.seekg(mar);";
+		re2c:define:YYSTAGP      = "@@{tag} = in.eof() ? 0 : in.tellg();";
+		re2c:define:YYSTAGN      = "@@{tag} = 0;";
+		re2c:define:YYSHIFTSTAG  = "@@{tag} += @@{shift};";
+        re2c:flags:tags = 1;
 		
+		@s [a-zA-Z_][a-zA-Z_0-9]* @e
+		{
+			std::string identifier = GET_STRING();
+			if (!macroCallStack.empty())
+			{
+				if (macroFunctionLabels.count(identifier))
+				{
+					argument += identifier + std::to_string(macroFunctionLabels[identifier]);
+					continue;
+				}
+				else
+				{
+					MacroCall mc = macroCallStack.back();
+					auto it = std::find(mc.paramaters->begin(), mc.paramaters->end(), identifier);
+					if (it != mc.paramaters->end())
+					{
+						auto index = std::distance(mc.paramaters->begin(), it);
+						argument += mc.arguments[index];
+						continue;
+					}
+				}
+			}
+			
+			if (assembler->macros.count(identifier))
+			{
+				argument += assembler->macros[identifier];
+				continue;
+			}
+
+			argument += identifier;
+			empty = false;
+		}
+
 		")" { if (!empty) { arguments.push_back(argument); } break; }
-		"\"" { arguments.push_back(std::string(1, '\"') + lexStringLiteral(false) + std::string(1, '\"')); }
+		"\"" { argument += std::string(1, '\"') + lexStringLiteral(false) + std::string(1, '\"'); empty = false; }
 		"," { arguments.push_back(argument); argument = ""; continue; }
 		* { argument.push_back(yych); empty = false; continue; }
 		%}
@@ -571,26 +643,6 @@ yy::parser::symbol_type yy::yylex()
     std::streampos mar, s, e;
     /*!stags:re2c format = 'std::streampos @@;'; */
 
-	auto getString = [](kasm::CompoundInputFileStream& in, std::streampos start, std::streampos end) -> std::string
-	{
-		std::string buffer;
-		buffer.resize(end - start);
-		in.seekg(start);
-		in.read(buffer.data(), end - start);
-		return buffer;
-	};
-
-	auto getChar = [](kasm::CompoundInputFileStream& in, std::streampos start, std::streampos end) -> char
-	{
-		in.seekg(start);
-		char c;
-		in.get(c);
-		in.seekg(end);
-		return c;
-	};
-
-#define GET_STRING() getString(in, s, e)
-#define GET_CHAR() getChar(in, s, e)
 #define TOKEN(name) do { return parser::make_##name(loc); } while(0)
 #define TOKENV(name, ...) do { return parser::make_##name(__VA_ARGS__, loc); } while(0)
 
@@ -711,12 +763,7 @@ yy::parser::symbol_type yy::yylex()
 		@s [a-zA-Z_][a-zA-Z_0-9]* @e
 		{
 			std::string identifier = GET_STRING();
-			if (assembler->macros.count(identifier))
-			{
-				in.pushString(assembler->macros[identifier]);
-				continue;
-			}
-			else if (macroFunctionParamaters != nullptr)
+			if (!macroCallStack.empty())
 			{
 				if (macroFunctionLabels.count(identifier))
 				{
@@ -724,14 +771,21 @@ yy::parser::symbol_type yy::yylex()
 				}
 				else
 				{
-					auto it = std::find(macroFunctionParamaters->begin(), macroFunctionParamaters->end(), identifier);
-					if (it != macroFunctionParamaters->end())
+					MacroCall mc = macroCallStack.back();
+					auto it = std::find(mc.paramaters->begin(), mc.paramaters->end(), identifier);
+					if (it != mc.paramaters->end())
 					{
-						auto index = std::distance(macroFunctionParamaters->begin(), it);
-						in.pushString(macroFunctionArguments[index]);
+						auto index = std::distance(mc.paramaters->begin(), it);
+						in.pushString(mc.arguments[index]);
 						continue;
 					}
 				}
+			}
+			
+			if (assembler->macros.count(identifier))
+			{
+				in.pushString(assembler->macros[identifier]);
+				continue;
 			}
 			
 			TOKENV(IDENTIFIER, identifier);
@@ -784,9 +838,9 @@ namespace kasm
 		macros.clear();
 		macroFunctions.clear();
 
-		in.include(asmPath);
+		in.setCallback(eofCallback);
+		in.open(asmPath);
 		flag = CTXFlag::None;
-		macroFunctionParamaters = nullptr;
 
 		loc.begin.filename = &in.getIdentifier();
 		loc.end.filename = &in.getIdentifier();

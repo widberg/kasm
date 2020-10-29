@@ -46,7 +46,6 @@ yes:
 	READ_STRING(msg, 32)
 	PRINT_ADDRESS(msg)
 	j ask
-
 skip:
 	PRINT_STRING("Thank you for running this program.\n")
 	li $v0, 0   # systemCallType = EXIT

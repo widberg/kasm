@@ -119,7 +119,7 @@ namespace kasm
 			{
 				asmFile << "_" << std::hex << std::setw(8) << std::setfill('0') << pc << ":" << std::endl;
 			}
-			asmFile << getLabelFromAddress(pc) << ": ";
+			asmFile << getLabelFromAddress(pc, true) << ": ";
 
 			programFile.read(reinterpret_cast<char*>(&d), sizeof(d));
 
@@ -200,23 +200,27 @@ namespace kasm
 					{
 						asmFile << "_" << std::hex << std::setw(8) << std::setfill('0') << pc + i << ":" << std::endl;
 					}
-					asmFile << getLabelFromAddress(pc + i) << ": " << ".byte 0x" << std::hex << std::setw(2) << std::setfill('0') << ((d.instruction & (0xFF << (i * CHAR_BIT))) >> (i * CHAR_BIT)) << std::endl;
+					asmFile << getLabelFromAddress(pc + i, true) << ": " << ".byte 0x" << std::hex << std::setw(2) << std::setfill('0') << ((d.instruction & (0xFF << (i * CHAR_BIT))) >> (i * CHAR_BIT)) << std::endl;
 				}
 			}
 			else
 			{
-				asmFile << getLabelFromAddress(pc) << ": " << ".word 0x" << std::hex << std::setw(8) << std::setfill('0') << d.instruction << std::endl;
+				asmFile << getLabelFromAddress(pc, true) << ": " << ".word 0x" << std::hex << std::setw(8) << std::setfill('0') << d.instruction << std::endl;
 			}
 			pc += INSTRUCTION_SIZE;
 		}
 	}
 
-	std::string Disassembler::getLabelFromAddress(std::uint32_t location)
+	std::string Disassembler::getLabelFromAddress(std::uint32_t location, bool padded)
 	{
 		std::stringstream ss;
 		if (symbolTable.count(location))
 		{
-			ss << std::setw(9) << std::setfill(' ') << symbolTable.at(location);
+			if (padded)
+			{
+				ss << std::setw(9) << std::setfill(' ');
+			}
+			ss << symbolTable.at(location);
 		}
 		else
 		{

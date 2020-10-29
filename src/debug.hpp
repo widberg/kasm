@@ -59,4 +59,5 @@ static inline void KASM_BREAKPOINT(void) { __asm__ __volatile__("NOP\n .word 0x1
 
 #if !KASM_DEBUG
 #define KASM_BREAKPOINT()
+#define KASM_ASSERT(condition, message)
 #endif

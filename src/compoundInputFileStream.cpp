@@ -7,16 +7,15 @@
 namespace kasm
 {
 	CompoundInputFileStream::CompoundInputFileStream()
-		: in(nullptr), eoFCallback(nullptr)
+		: eoFCallback(nullptr)
 	{
-		it = fileEntries.end();
+		reset();
 	}
 
 	CompoundInputFileStream::CompoundInputFileStream(const std::string& aFileName, void(*aEOFCallback)(unsigned))
-		: in(nullptr), eoFCallback(aEOFCallback)
+		: eoFCallback(aEOFCallback)
 	{
-		it = fileEntries.end();
-		include(aFileName);
+		open(aFileName);
 	}
 
 	CompoundInputFileStream::~CompoundInputFileStream()
@@ -30,7 +29,6 @@ namespace kasm
 	char CompoundInputFileStream::peek()
 	{
 		if (eof()) return '\0';
-		//std::cout << (char)(in->peek());
 		return in->peek();
 	}
 
@@ -45,7 +43,7 @@ namespace kasm
 		if (streamPos > fileEntries.back().end) throw std::exception("compound file stream attempting to seek past end of available input");
 		for (auto i = fileEntries.begin(); i != fileEntries.end(); i++)
 		{
-			if (streamPos >= i->start && streamPos <= i->end)
+			if (streamPos >= i->start && streamPos <= i->end && i->file != nullptr)
 			{
 				it = i;
 				in = it->file->stream;
@@ -57,6 +55,7 @@ namespace kasm
 
 	std::streampos CompoundInputFileStream::tellgInternal() const
 	{
+		if (fileEntries.empty()) return 0;
 		return it->start + in->tellg() - it->offset;
 	}
 
@@ -76,12 +75,13 @@ namespace kasm
 		{
 			in->clear();
 
-			if (!isStub && it->uid != 0)
+			if (!isStub && it->uid != 0 && giveStub)
 			{
 				auto i = it;
 				i++;
-				fileEntries.insert(i, { it->file, 0, 0, 0, it->uid });
+				fileEntries.insert(i, { nullptr, 0, 0, 0, it->uid });
 				it->uid = 0;
+				it++;
 				return false;
 			}
 
@@ -117,6 +117,25 @@ namespace kasm
 	{
 		if (eof()) return;
 		in->read(buffer, size);
+	}
+
+	void CompoundInputFileStream::setCallback(void(*aEoFCallback)(unsigned))
+	{
+		eoFCallback = aEoFCallback;
+	}
+
+	void CompoundInputFileStream::reset()
+	{
+		files.clear();
+		fileEntries.clear();
+		it = fileEntries.end();
+		in = nullptr;
+	}
+
+	unsigned CompoundInputFileStream::open(const std::string& aFileName, bool setUid)
+	{
+		reset();
+		return include(aFileName, setUid);
 	}
 
 	unsigned CompoundInputFileStream::include(const std::string& aFileName, bool setUid)
@@ -202,15 +221,17 @@ namespace kasm
 		std::streampos cursor = tellgInternal();
 		for (auto i : fileEntries)
 		{
+			if (i.file == nullptr)
+			{
+				std::cout << "[stub " << i.uid << "]" << std::endl;
+				continue;
+			}
+
 			std::cout << (i.start == it->start ? "->" : "") << "[" << i.start << ", " << i.end << "]" << std::endl;
 			i.file->stream->clear();
 			std::streampos sav = i.file->stream->tellg();
 			i.file->stream->seekg(i.offset, std::ios::beg);
 			
-			if (cursor == 1295)
-			{
-				KASM_BREAKPOINT();
-			}
 			if (cursor >= i.start && cursor <= i.end)
 			{
 				std::streampos size = cursor - i.start;

@@ -15,6 +15,6 @@ namespace kasm
 		void disassemble(const std::string& programPath, const std::string& asmPath, const std::string& symbolTablePath = "");
 	private:
 		std::unordered_map<std::uint32_t, std::string> symbolTable;
-		std::string getLabelFromAddress(std::uint32_t location);
+		std::string getLabelFromAddress(std::uint32_t location, bool padded = false);
 	};
 }

@@ -24,7 +24,10 @@ namespace kasm
 		bool eof(bool giveStub = false);
 		void get(char& c);
 		void read(char* buffer, unsigned size);
+		void setCallback(void(*aEoFCallback)(unsigned));
 
+		void reset();
+		unsigned open(const std::string& aFileName, bool setUid = false);
 		unsigned include(const std::string& aFileName, bool setUid = false);
 		unsigned pushString(const std::string& str, bool setUid = false);
 		unsigned put(char c, bool setUid = false);
