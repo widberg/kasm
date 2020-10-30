@@ -43,7 +43,7 @@ enum class CTXFlag
 struct MacroCall
 {
 	unsigned uid;
-	const std::vector<std::string>* paramaters;
+	std::vector<std::string> paramaters;
 	std::vector<std::string> arguments;
 };
 
@@ -51,12 +51,12 @@ static kasm::CompoundInputFileStream in;
 static yy::location loc;
 static kasm::Assembler* assembler;
 static CTXFlag flag;
-static std::unordered_map<std::string, unsigned int> macroFunctionLabels;
 static std::vector<MacroCall> macroCallStack;
-static bool wasExpandingMacro;
+static std::stack<bool> labelInMacro;
 
 void eofCallback(unsigned uid)
 {
+	KASM_ASSERT(!macroCallStack.empty(), "Trying to pop empty macro stack");
 	KASM_ASSERT(uid == macroCallStack.back().uid, "Stack order got fucked");
 	macroCallStack.pop_back();
 }
@@ -186,17 +186,26 @@ statement_list
 	;
 
 statement
-    : IDENTIFIER ':' { wasExpandingMacro = !macroCallStack.empty(); } statement
+    : IDENTIFIER ':' { labelInMacro.push(!macroCallStack.empty()); } statement
 	{
 		$$ = $4;
-		if (wasExpandingMacro)
+		if (labelInMacro.top())
 		{
-			assembler->defineLabel($1 + std::to_string(macroFunctionLabels[$1]++), $4);
+			unsigned x = 0;
+			MacroCall& mc = macroCallStack.back();
+			while (assembler->isIdentifierDefined($1 + std::to_string(x)) || std::find(mc.paramaters.begin(), mc.paramaters.end(), $1 + std::to_string(x)) != mc.paramaters.end())
+			{
+				x++;
+			}
+			mc.paramaters.push_back($1);
+			mc.arguments.push_back($1 + std::to_string(x));
+			assembler->defineLabel($1 + std::to_string(x), $4);
 		}
 		else
 		{
 			assembler->defineLabel($1, $4);
 		}
+		labelInMacro.pop();
 	}
 	| END_OF_LINE statement { $$ = $2; }
 	| END_OF_FILE { $$ = GET_LOC(); }
@@ -280,7 +289,7 @@ statement
 	| DBGBP          end_of_statement { KASM_BREAKPOINT(); } statement { $$ = $4; }
 	| DEFINE IDENTIFIER { flag = CTXFlag::LINE_AS_STRING; } STRING { flag = CTXFlag::None; assembler->defineMacro($2, $4); } end_of_statement statement { $$ = $7; }
 	| MACRO IDENTIFIER '(' identifier_list ')' END_OF_LINE { flag = CTXFlag::BLOCK_AS_STRING; } STRING { flag = CTXFlag::None; assembler->defineMacro($2, $4, $8); } end_of_statement statement { $$ = $11; }
-	| IDENTIFIER '(' { flag = CTXFlag::ARGUMENT_LIST; } ARGUMENT_LIST { flag = CTXFlag::None; } end_of_statement { macroCallStack.push_back({in.pushString(assembler->macroFunctions[$1].body, true), &assembler->macroFunctions[$1].paramaters, $4}); } statement { $$ = $8; }
+	| IDENTIFIER '(' { flag = CTXFlag::ARGUMENT_LIST; } ARGUMENT_LIST { flag = CTXFlag::None; } end_of_statement { macroCallStack.push_back({in.pushString(assembler->macroFunctions[$1].body, true), assembler->macroFunctions[$1].paramaters, $4}); } statement { $$ = $8; }
 
 	// Instructions
     | ADD    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(ADD, $2, $4, $6); }
@@ -611,21 +620,14 @@ std::vector<std::string> argumentList()
 			std::string identifier = GET_STRING();
 			if (!macroCallStack.empty())
 			{
-				if (macroFunctionLabels.count(identifier))
+				MacroCall& mc = macroCallStack.back();
+				auto it = std::find(mc.paramaters.begin(), mc.paramaters.end(), identifier);
+				if (it != mc.paramaters.end())
 				{
-					argument += identifier + std::to_string(macroFunctionLabels[identifier]);
+					auto index = std::distance(mc.paramaters.begin(), it);
+					argument += mc.arguments[index];
+					empty = false;
 					continue;
-				}
-				else
-				{
-					MacroCall mc = macroCallStack.back();
-					auto it = std::find(mc.paramaters->begin(), mc.paramaters->end(), identifier);
-					if (it != mc.paramaters->end())
-					{
-						auto index = std::distance(mc.paramaters->begin(), it);
-						argument += mc.arguments[index];
-						continue;
-					}
 				}
 			}
 			
@@ -776,20 +778,13 @@ yy::parser::symbol_type yy::yylex()
 			std::string identifier = GET_STRING();
 			if (!macroCallStack.empty())
 			{
-				if (macroFunctionLabels.count(identifier))
+				MacroCall& mc = macroCallStack.back();
+				auto it = std::find(mc.paramaters.begin(), mc.paramaters.end(), identifier);
+				if (it != mc.paramaters.end())
 				{
-					TOKENV(IDENTIFIER, identifier + std::to_string(macroFunctionLabels[identifier]));
-				}
-				else
-				{
-					MacroCall mc = macroCallStack.back();
-					auto it = std::find(mc.paramaters->begin(), mc.paramaters->end(), identifier);
-					if (it != mc.paramaters->end())
-					{
-						auto index = std::distance(mc.paramaters->begin(), it);
-						in.pushString(mc.arguments[index]);
-						continue;
-					}
+					auto index = std::distance(mc.paramaters.begin(), it);
+					in.pushString(mc.arguments[index]);
+					continue;
 				}
 			}
 			

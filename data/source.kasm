@@ -1,7 +1,7 @@
-	.define SYS_PRINT_STRING li $v0, 6
 	.macro PRINT_ADDRESS(address)
 		.text
-		SYS_PRINT_STRING
+		li $v0, 6
+		.dbgbp
 		la $a0, address
 		sys
 	.end
@@ -10,10 +10,7 @@
 	string_address:
 		.asciiz string
 		.text
-		#PRINT_ADDRESS(string_address)
-		SYS_PRINT_STRING
-		la $a0, string_address
-		sys
+		PRINT_ADDRESS(string_address)
 	.end
 	.macro READ_STRING(buffer_address, buffer_size)
 		li $v0, 5
@@ -26,7 +23,6 @@ main:
 	PRINT_STRING("bruh\n")
 	
 ask:
-	.dbgbp
 	PRINT_STRING("Would you like to type something? (y/n): ")
 	li $v0, 3        # ans
 	sys
@@ -77,7 +73,7 @@ some_trash:
 	.message "test"
 	.include "more_data.kasm"
 	.message "test2"
-	.dbg ".dbg \".message \\\"fuck\\\"\""
+	.dbg ".dbg \".message \\\"heck\\\"\""
 
 
 

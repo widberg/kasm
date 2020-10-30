@@ -4,7 +4,7 @@ namespace kasm
 {
 	bool Assembler::isIdentifierDefined(const std::string& identifier)
 	{
-		return labelLocations.count(identifier) | macros.count(identifier);
+		return labelLocations.count(identifier) || macros.count(identifier) || macroFunctions.count(identifier);
 	}
 
 	bool Assembler::resolveAddress(AddressData& address, bool mustResolve)

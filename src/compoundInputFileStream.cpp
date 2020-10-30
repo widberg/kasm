@@ -40,10 +40,11 @@ namespace kasm
 
 	void CompoundInputFileStream::seekg(const std::streampos& streamPos)
 	{
-		if (streamPos > fileEntries.back().end) throw std::exception("compound file stream attempting to seek past end of available input");
+		if (fileEntries.empty()) throw std::exception("compound file stream attempting to seek empty file");
+		if (streamPos >= fileEntries.back().end) throw std::exception("compound file stream attempting to seek past end of available input");
 		for (auto i = fileEntries.begin(); i != fileEntries.end(); i++)
 		{
-			if (streamPos >= i->start && streamPos <= i->end && i->file != nullptr)
+			if (streamPos >= i->start && streamPos < i->end && i->file != nullptr)
 			{
 				it = i;
 				in = it->file->stream;
@@ -71,7 +72,7 @@ namespace kasm
 		if (it == fileEntries.end()) return true;
 		bool isStub = it->file == nullptr;
 		KASM_ASSERT(it->file->stream == in, "WEEE WOOO WEEE WOO");
-		while (in->peek() == std::istream::traits_type::eof() || tellgInternal() > it->end || isStub)
+		while (in->peek() == std::istream::traits_type::eof() || tellgInternal() >= it->end || isStub)
 		{
 			in->clear();
 
@@ -98,7 +99,7 @@ namespace kasm
 			}
 
 			isStub = it->file == nullptr;
-			if (giveStub && isStub && it->uid != 0) return false;
+			if (giveStub && isStub) return false;
 			if (isStub) continue;
 
 			in = it->file->stream;
@@ -187,18 +188,22 @@ namespace kasm
 			newUid = ++uid;
 		}
 
-		if (eof(true) || it->file == nullptr)
+		if (fileEntries.empty())
 		{
-			it = fileEntries.insert(it, { &file, 0, file.length - std::streampos(1), 0, newUid });
+			it = fileEntries.insert(it, { &file, 0, file.length, 0, newUid });
+		}
+		else if (eof(true) || it->file == nullptr)
+		{
+			it = fileEntries.insert(it, { &file, it->end, it->end + file.length, 0, newUid });
 		}
 		else
 		{
 			it->end = tellgInternal();
-			std::streampos start = it->end + std::streampos(1);
+			std::streampos start = it->end;
 			auto i = it;
 			i++;
-			fileEntries.insert(i, { &file, start, start + file.length - std::streampos(1), 0, newUid });
-			fileEntries.insert(i, { it->file, start + file.length, start + file.length + it->file->length - (it->end - it->start + it->offset) - std::streampos(2), it->end - it->start + it->offset, it->uid });
+			fileEntries.insert(i, { &file, start, start + file.length, 0, newUid });
+			fileEntries.insert(i, { it->file, start + file.length, start + file.length + it->file->length - (it->end - it->start + it->offset), it->end - it->start + it->offset, it->uid });
 			
 			for (; i != fileEntries.end(); i++)
 			{
@@ -211,6 +216,8 @@ namespace kasm
 
 		in = it->file->stream;
 		in->seekg(it->offset);
+
+		//debugPrint();
 
 		return it->uid;
 	}
@@ -227,12 +234,12 @@ namespace kasm
 				continue;
 			}
 
-			std::cout << (i.start == it->start ? "->" : "") << "[" << i.start << ", " << i.end << "]" << std::endl;
+			std::cout << (i.start == it->start ? "->" : "") << "[" << i.start << ", " << i.end << ")" << std::endl;
 			i.file->stream->clear();
 			std::streampos sav = i.file->stream->tellg();
 			i.file->stream->seekg(i.offset, std::ios::beg);
 			
-			if (cursor >= i.start && cursor <= i.end)
+			if (cursor >= i.start && cursor < i.end)
 			{
 				std::streampos size = cursor - i.start;
 				std::string buffer;
@@ -242,14 +249,14 @@ namespace kasm
 
 				std::cout << "[->]";
 
-				size = i.end - cursor + 1;
+				size = i.end - cursor;
 				buffer.resize(size);
 				i.file->stream->read(static_cast<char*>(buffer.data()), size);
 				std::cout << buffer << std::endl;
 			}
 			else
 			{
-				std::streampos size = i.end - i.start + 1;
+				std::streampos size = i.end - i.start;
 				std::string buffer;
 				buffer.resize(size);
 				i.file->stream->read(static_cast<char*>(buffer.data()), size);
