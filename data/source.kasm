@@ -1,7 +1,6 @@
 	.macro PRINT_ADDRESS(address)
 		.text
 		li $v0, 6
-		.dbgbp
 		la $a0, address
 		sys
 	.end
@@ -42,6 +41,7 @@ yes:
 	PRINT_STRING("Type something\n> ")
 	READ_STRING(msg, 32)
 	PRINT_ADDRESS(msg)
+	PRINT_STRING("\n")
 	j ask
 skip:
 	PRINT_STRING("Thank you for running this program.\n")

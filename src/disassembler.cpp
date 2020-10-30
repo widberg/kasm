@@ -191,7 +191,7 @@ namespace kasm
 		while (programFile.read(reinterpret_cast<char*>(&d), sizeof(d)) && !programFile.eof())
 		{
 			bool splitWordToBytes = false;
-			for (std::uint32_t i = 0; i < 4; i++)
+			for (std::uint32_t i = 1; i < 4; i++)
 			{
 				if (symbolTable.count(pc + i))
 				{
@@ -213,6 +213,10 @@ namespace kasm
 			}
 			else
 			{
+				if (symbolTable.count(pc))
+				{
+					asmFile << "_" << std::hex << std::setw(8) << std::setfill('0') << pc << ":" << std::endl;
+				}
 				asmFile << getLabelFromAddress(pc, true) << ": " << ".word 0x" << std::hex << std::setw(8) << std::setfill('0') << d.instruction << std::endl;
 			}
 			pc += INSTRUCTION_SIZE;

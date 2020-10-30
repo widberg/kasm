@@ -855,7 +855,7 @@ namespace kasm
 
 		assembler = this;
         yy::parser parser;
-        if (!parser.parse()) return;
+        if (parser.parse()) return;
 
         for (AddressData unresolvedAddressLocation : unresolvedAddressLocations)
         {
