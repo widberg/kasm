@@ -12,6 +12,7 @@ add_executable(kasm
 	src/assembler.hpp src/assembler.cpp src/assembler.yy src/assembler_util.cpp
 	src/binaryBuilder.hpp src/binaryBuilder.cpp
 	src/compiler.hpp src/compiler.cpp
+	src/debugger.cpp src/debugger.hpp
 	src/disassembler.hpp src/disassembler.cpp
 	src/virtualMachine.hpp src/virtualMachine.cpp
 	data/source.kasm

@@ -156,6 +156,10 @@ union SplitWord
 
 #define GET_LOC() assembler->binary.getLocation()
 
+kasm::AddressData stackAddress(kasm::Register::SP);
+kasm::AddressData frameAddress(kasm::Register::FP);
+kasm::AddressData returnAddress(kasm::Register::RA);
+
 }//%code
 
 %token END_OF_FILE 0 END_OF_LINE
@@ -167,7 +171,7 @@ union SplitWord
 %token DIV DIVU J JAL JR LB LUI LW MFHI MFLO MULT MULTU OR ORI SB SLL SLLV NOR
 %token SLT SLTI SLTIU SLTU SRA SRL SRLV SUB SUBU SW SYS XOR XORI JALR
 
-%token COPY CLR B BAL BGT BLT BGE BLE BGTU BEQZ REM LI LA NOP NOT
+%token COPY CLR B BAL BGT BLT BGE BLE BGTU BEQZ REM LI LA NOP NOT PUSHW POPW PUSHB POPB RET CALL
 
 %type<std::string> IDENTIFIER STRING
 %type<std::uint32_t> LITERAL REGISTER
@@ -340,7 +344,7 @@ statement
 	| NOR    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(NOR, $2, $4, $6); }
 
 	// Pseudoinstructions
-	| COPY    REGISTER ',' REGISTER                   end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(OR, $2, $4, kasm::ZERO); }
+	| COPY   REGISTER ',' REGISTER                    end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(OR, $2, $4, kasm::ZERO); }
 	| CLR    REGISTER                                 end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(OR, $2, kasm::ZERO, kasm::ZERO); }
 	| ADD    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(ADDI, $2, $4, $6); }
 	| JALR   REGISTER                                 end_of_statement { $$ = GET_LOC(); INSTRUCTION_RR(JALR, $2, kasm::RA); }
@@ -352,13 +356,51 @@ statement
 	| BGE    REGISTER ',' REGISTER ',' direct_address end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(SLT, kasm::AT, $2, $4); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
 	| BLE    REGISTER ',' REGISTER ',' direct_address end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(SLT, kasm::AT, $4, $2); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
 	| BGTU   REGISTER ',' REGISTER ',' direct_address end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(SLTU, kasm::AT, $2, $4); INSTRUCTION_RRA(BEQ, kasm::AT, kasm::ZERO, $6, DirectAddressOffset); }
-	| BEQZ      REGISTER ',' direct_address           end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRA(BEQ, $2, kasm::ZERO, $4, DirectAddressOffset); }
+	| BEQZ   REGISTER ',' direct_address              end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRA(BEQ, $2, kasm::ZERO, $4, DirectAddressOffset); }
 	| BEQ    REGISTER ',' LITERAL  ',' direct_address end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(ORI, kasm::AT, kasm::ZERO, $4); INSTRUCTION_RRA(BEQ, $2, kasm::AT, $6, DirectAddressOffset); }
 	| BNE    REGISTER ',' LITERAL  ',' direct_address end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(ORI, kasm::AT, kasm::ZERO, $4); INSTRUCTION_RRA(BNE, $2, kasm::AT, $6, DirectAddressOffset); }
 	| MULT   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RR(MULT, $4, $6); INSTRUCTION_R(MFLO, $2); }
 	| DIV    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RR(DIV, $4, $6); INSTRUCTION_R(MFLO, $2); }
 	| REM    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RR(DIV, $4, $6); INSTRUCTION_R(MFHI, $2); }
 	| NOT    REGISTER ',' REGISTER                    end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(NOR, $2, $4, kasm::ZERO); }
+	| PUSHW  REGISTER                                 end_of_statement
+	{
+		$$ = GET_LOC();
+		INSTRUCTION_RRL(ADDI, kasm::Register::SP, kasm::Register::SP, -kasm::INSTRUCTION_SIZE);
+		INSTRUCTION_RA(SW, $2, stackAddress, IndirectAddressOffset);
+	}
+	| POPW   REGISTER                                 end_of_statement
+	{
+		$$ = GET_LOC();
+		INSTRUCTION_RA(LW, $2, stackAddress, IndirectAddressOffset);
+		INSTRUCTION_RRL(ADDI, kasm::Register::SP, kasm::Register::SP, kasm::INSTRUCTION_SIZE);
+	}
+	| PUSHB  REGISTER                                 end_of_statement
+	{
+		$$ = GET_LOC();
+		INSTRUCTION_RRL(ADDI, kasm::Register::SP, kasm::Register::SP, -1);
+		INSTRUCTION_RA(SB, $2, stackAddress, IndirectAddressOffset);
+	}
+	| POPB   REGISTER                                 end_of_statement
+	{
+		$$ = GET_LOC();
+		INSTRUCTION_RA(LB, $2, stackAddress, IndirectAddressOffset);
+		INSTRUCTION_RRL(ADDI, kasm::Register::SP, kasm::Register::SP, 1);
+	}
+	| RET                                             end_of_statement
+	{
+		$$ = GET_LOC();
+		INSTRUCTION_RA(LW, kasm::Register::FP, stackAddress, IndirectAddressOffset);
+		INSTRUCTION_RRL(ADDI, kasm::Register::SP, kasm::Register::SP, kasm::INSTRUCTION_SIZE);
+		INSTRUCTION_RA(LW, kasm::Register::RA, stackAddress, IndirectAddressOffset);
+		INSTRUCTION_RRL(ADDI, kasm::Register::SP, kasm::Register::SP, kasm::INSTRUCTION_SIZE);
+		INSTRUCTION_R(JR, kasm::Register::RA);
+	}
+	| CALL   direct_address                           end_of_statement
+	{
+		$$ = GET_LOC();
+		INSTRUCTION_A(JAL, $2, DirectAddressAbsolute);
+	}
 	| LI     REGISTER ',' LITERAL                     end_of_statement
 	{
 		$$ = GET_LOC(); 
@@ -771,6 +813,12 @@ yy::parser::symbol_type yy::yylex()
 		'la'             { TOKEN(LA); }
 		'nop'           { TOKEN(NOP); }
 		'not'           { TOKEN(NOT); }
+		'pushw'       { TOKEN(PUSHW); }
+		'popw'         { TOKEN(POPW); }
+		'pushb'       { TOKEN(PUSHB); }
+		'popb'         { TOKEN(POPB); }
+		'ret'           { TOKEN(RET); }
+		'call'         { TOKEN(CALL); }
 
 		// Identifier
 		@s [a-zA-Z_][a-zA-Z_0-9]* @e

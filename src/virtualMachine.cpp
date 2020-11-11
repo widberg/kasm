@@ -21,8 +21,7 @@ namespace kasm
         shouldExit = false;
         exitCode = 0;
 
-        std::uint8_t* stack = new std::uint8_t[144];
-        registers[SP] = reinterpret_cast<std::uint32_t>(stack + 144 - 1);
+        registers[SP] = STACK_OFFSET + STACK_SIZE;
 
         while (pc < program.getTextSegmentLength() && !shouldExit)
         {
@@ -37,8 +36,15 @@ namespace kasm
                 advancePc();
                 break;
             case ADDI:
-                registers[d.register0] = registers[d.register1] + d.immediate;
-                advancePc();
+                {
+                    std::uint32_t unsignedImmediate = 0x0000FFFF & d.immediate;
+                    std::uint32_t mask = 0x00008000;
+                    if (mask & unsignedImmediate) unsignedImmediate |= 0xFFFF0000;
+                    std::int32_t signedImmediate = unsignedImmediate;
+                    std::int32_t signedSum = reinterpret_cast<std::int32_t&>(registers[d.register1]) + signedImmediate;
+                    registers[d.register0] = reinterpret_cast<std::uint32_t&>(signedSum);
+                    advancePc();
+                }
                 break;
             case ADDIU:
                 registers[d.register0] = registers[d.register1] + d.immediate;
@@ -234,12 +240,10 @@ namespace kasm
                 advancePc();
                 break;
             default:
-                throw std::exception(std::string("Illegal opcode: " + d.opcode).c_str());
+                executeSignal(Signal::ILLEGAL_OPCODE);
                 break;
             }
         }
-
-        delete[] stack;
 
         return exitCode;
     }
@@ -264,6 +268,23 @@ namespace kasm
         }
         std::cout << "---  END PROGRAM MEMORY  ---" << std::endl;
         */
+    }
+
+    void VirtualMachine::setSignalHandler(Signal signal, void(*handler)(void))
+    {
+        signalHandlers[signal] = handler;
+    }
+
+    void VirtualMachine::executeSignal(Signal signal)
+    {
+        if (signalHandlers.count(signal))
+        {
+            signalHandlers[signal]();
+        }
+        else
+        {
+            throw std::exception("unhandled signal");
+        }
     }
 
     void VirtualMachine::systemCall()

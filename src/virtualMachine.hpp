@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "common.hpp"
 
@@ -19,7 +20,16 @@ namespace kasm
 		int execute();
 		void loadProgram(const std::string& programPath);
 
-	private:
+		enum class Signal
+		{
+			SEGMENTATION_FAULT,
+			ILLEGAL_OPCODE
+		};
+
+		void setSignalHandler(Signal signal, void(*handler)(void));
+		void executeSignal(Signal signal);
+
+	protected:
 		void advancePc();
 		void systemCall();
 		std::uint32_t resolveAddress(const InstructionData& instructionData, AddressType type);
@@ -31,8 +41,9 @@ namespace kasm
 		class Program : public std::vector<std::uint8_t>
 		{
 		public:
-			Program() {}
-			Program(const std::string& programPath) { open(programPath); }
+			Program() { stack = new std::uint8_t[STACK_SIZE]; }
+			Program(const std::string& programPath) { stack = new std::uint8_t[STACK_SIZE]; open(programPath); }
+			~Program() { delete[] stack; };
 
 			void open(const std::string& programPath)
 			{
@@ -48,9 +59,14 @@ namespace kasm
 				{
 					return *reinterpret_cast<std::uint32_t*>(data() + i);
 				}
-				else
+				else if (i < STACK_OFFSET)
 				{
 					return *reinterpret_cast<std::uint32_t*>(data() + i - DATA_SEGMENT_OFFSET + programHeader.textSegmentLength);
+				}
+				else
+				{
+					std::uint32_t tmp = i - STACK_OFFSET;
+					return *reinterpret_cast<std::uint32_t*>(stack + tmp);
 				}
 			}
 
@@ -60,9 +76,13 @@ namespace kasm
 				{
 					return reinterpret_cast<char*>(data() + i);
 				}
-				else
+				else if (i < STACK_OFFSET)
 				{
 					return reinterpret_cast<char*>(data() + i - DATA_SEGMENT_OFFSET + programHeader.textSegmentLength);
+				}
+				else
+				{
+					return reinterpret_cast<char*>(stack + i - STACK_OFFSET);
 				}
 			}
 
@@ -74,9 +94,13 @@ namespace kasm
 				{
 					return data()[i];
 				}
-				else
+				else if (i < STACK_OFFSET)
 				{
 					return data()[i - DATA_SEGMENT_OFFSET + programHeader.textSegmentLength];
+				}
+				else
+				{
+					return stack[i - STACK_OFFSET];
 				}
 			}
 
@@ -86,13 +110,18 @@ namespace kasm
 				{
 					return data()[i];
 				}
-				else
+				else if (i < STACK_OFFSET)
 				{
 					return data()[i - DATA_SEGMENT_OFFSET + programHeader.textSegmentLength];
+				}
+				else
+				{
+					return stack[i - STACK_OFFSET];
 				}
 			}
 		private:
 			ProgramHeader programHeader;
+			std::uint8_t* stack;
 		} program;
 
 		class Registers
@@ -117,5 +146,7 @@ namespace kasm
 			ALLOCATE,
 			DEALLOCATE,
 		};
+
+		std::unordered_map<Signal, void(*)(void)> signalHandlers;
 	};
 }
