@@ -41,9 +41,9 @@ namespace kasm
 		class Program : public std::vector<std::uint8_t>
 		{
 		public:
-			Program() { stack = new std::uint8_t[STACK_SIZE]; }
-			Program(const std::string& programPath) { stack = new std::uint8_t[STACK_SIZE]; open(programPath); }
-			~Program() { delete[] stack; };
+			Program() { stack = new std::uint8_t[STACK_SIZE]; global = new std::uint8_t[GLOBAL_SIZE];}
+			Program(const std::string& programPath) { stack = new std::uint8_t[STACK_SIZE]; global = new std::uint8_t[GLOBAL_SIZE]; open(programPath); }
+			~Program() { delete[] stack; delete[] global; };
 
 			void open(const std::string& programPath)
 			{
@@ -63,10 +63,15 @@ namespace kasm
 				{
 					return *reinterpret_cast<std::uint32_t*>(data() + i - DATA_SEGMENT_OFFSET + programHeader.textSegmentLength);
 				}
-				else
+				else if (i < GLOBAL_OFFSET)
 				{
 					std::uint32_t tmp = i - STACK_OFFSET;
 					return *reinterpret_cast<std::uint32_t*>(stack + tmp);
+				}
+				else
+				{
+					std::uint32_t tmp = i - GLOBAL_OFFSET;
+					return *reinterpret_cast<std::uint32_t*>(global + tmp);
 				}
 			}
 
@@ -80,9 +85,13 @@ namespace kasm
 				{
 					return reinterpret_cast<char*>(data() + i - DATA_SEGMENT_OFFSET + programHeader.textSegmentLength);
 				}
-				else
+				else if (i < GLOBAL_OFFSET)
 				{
 					return reinterpret_cast<char*>(stack + i - STACK_OFFSET);
+				}
+				else
+				{
+					return reinterpret_cast<char*>(global + i - GLOBAL_OFFSET);
 				}
 			}
 
@@ -98,9 +107,13 @@ namespace kasm
 				{
 					return data()[i - DATA_SEGMENT_OFFSET + programHeader.textSegmentLength];
 				}
-				else
+				else if (i < GLOBAL_OFFSET)
 				{
 					return stack[i - STACK_OFFSET];
+				}
+				else
+				{
+					return global[i - GLOBAL_OFFSET];
 				}
 			}
 
@@ -114,14 +127,19 @@ namespace kasm
 				{
 					return data()[i - DATA_SEGMENT_OFFSET + programHeader.textSegmentLength];
 				}
-				else
+				else if (i < GLOBAL_OFFSET)
 				{
 					return stack[i - STACK_OFFSET];
+				}
+				else
+				{
+					return global[i - GLOBAL_OFFSET];
 				}
 			}
 		private:
 			ProgramHeader programHeader;
 			std::uint8_t* stack;
+			std::uint8_t* global;
 		} program;
 
 		class Registers

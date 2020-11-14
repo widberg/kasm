@@ -164,8 +164,10 @@ namespace kasm
         std::uint32_t dataSegmentLength;
     };
 
+    static const std::uint32_t GLOBAL_SIZE = 256;
     static const std::uint32_t STACK_SIZE = 256;
 
+    static const std::uint32_t GLOBAL_OFFSET       = 0xFFFF0000;
     static const std::uint32_t STACK_OFFSET        = 0x80000000;
     static const std::uint32_t DATA_SEGMENT_OFFSET = 0x10010000;
     static const std::uint32_t TEXT_SEGMENT_OFFSET = 0x00000000;

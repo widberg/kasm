@@ -22,6 +22,7 @@ namespace kasm
         exitCode = 0;
 
         registers[SP] = STACK_OFFSET + STACK_SIZE;
+        registers[GP] = GLOBAL_OFFSET;
 
         while (pc < program.getTextSegmentLength() && !shouldExit)
         {

@@ -171,7 +171,7 @@ kasm::AddressData returnAddress(kasm::Register::RA);
 %token DIV DIVU J JAL JR LB LUI LW MFHI MFLO MULT MULTU OR ORI SB SLL SLLV NOR
 %token SLT SLTI SLTIU SLTU SRA SRL SRLV SUB SUBU SW SYS XOR XORI JALR
 
-%token COPY CLR B BAL BGT BLT BGE BLE BGTU BEQZ REM LI LA NOP NOT PUSHW POPW PUSHB POPB RET CALL
+%token COPY CLR B BAL BGT BLT BGE BLE BGTU BEQZ REM LI LA NOP NOT PUSHW POPW PUSHB POPB RET CALL ENTER
 
 %type<std::string> IDENTIFIER STRING
 %type<std::uint32_t> LITERAL REGISTER
@@ -387,9 +387,19 @@ statement
 		INSTRUCTION_RA(LB, $2, stackAddress, IndirectAddressOffset);
 		INSTRUCTION_RRL(ADDI, kasm::Register::SP, kasm::Register::SP, 1);
 	}
+	| ENTER                                             end_of_statement
+	{
+		$$ = GET_LOC();
+		INSTRUCTION_RRL(ADDI, kasm::Register::SP, kasm::Register::SP, -kasm::INSTRUCTION_SIZE);
+		INSTRUCTION_RA(SW, kasm::Register::RA, stackAddress, IndirectAddressOffset);
+		INSTRUCTION_RRL(ADDI, kasm::Register::SP, kasm::Register::SP, -kasm::INSTRUCTION_SIZE);
+		INSTRUCTION_RA(SW, kasm::Register::FP, stackAddress, IndirectAddressOffset);
+		INSTRUCTION_RRL(OR, kasm::Register::FP, kasm::Register::SP, kasm::ZERO);
+	}
 	| RET                                             end_of_statement
 	{
 		$$ = GET_LOC();
+		INSTRUCTION_RRL(OR, kasm::Register::SP, kasm::Register::FP, kasm::ZERO);
 		INSTRUCTION_RA(LW, kasm::Register::FP, stackAddress, IndirectAddressOffset);
 		INSTRUCTION_RRL(ADDI, kasm::Register::SP, kasm::Register::SP, kasm::INSTRUCTION_SIZE);
 		INSTRUCTION_RA(LW, kasm::Register::RA, stackAddress, IndirectAddressOffset);
@@ -807,7 +817,7 @@ yy::parser::symbol_type yy::yylex()
 		'bge'           { TOKEN(BGE); }
 		'ble'           { TOKEN(BLE); }
 		'bgtu'         { TOKEN(BGTU); }
-		'BEQZ'         { TOKEN(BEQZ); }
+		'beqz'         { TOKEN(BEQZ); }
 		'rem'           { TOKEN(REM); }
 		'li'             { TOKEN(LI); }
 		'la'             { TOKEN(LA); }
@@ -819,6 +829,7 @@ yy::parser::symbol_type yy::yylex()
 		'popb'         { TOKEN(POPB); }
 		'ret'           { TOKEN(RET); }
 		'call'         { TOKEN(CALL); }
+		'enter'       { TOKEN(ENTER); }
 
 		// Identifier
 		@s [a-zA-Z_][a-zA-Z_0-9]* @e

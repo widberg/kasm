@@ -7,43 +7,54 @@ x:
 	li $t0, 2
 	sb $t0, x
 	lb $t0, x
-	pushw $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
 	li $t0, 3
-	popw $t1
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
 	add $t0, $t0, $t1
-	pushw $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
 	lb $t0, x
-	pushw $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
 	li $t0, 3
-	popw $t1
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
 	add $t0, $t0, $t1
-	popw $t1
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
 	add $t0, $t0, $t1
 	sb $t0, x
 	lb $t0, x
-	pushw $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
 	lb $t0, x
 	copy $4, $t0
 	call test
-	popw $t1
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
 	add $t0, $t0, $t1
 	copy $a0, $t0
 	li $v0, 0
 	sys
 test:
-	pushw $ra
-	pushw $fp
-	copy $fp, $sp
+	enter
+	addi $sp, $sp, -4
 	sw $8, -4($fp)
 	lb $t0, x
-	pushw $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
 	li $t0, 3
-	popw $t1
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
 	add $t0, $t0, $t1
 	sb $t0, x
 	lb $t0, x
-	pushw $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
 	li $t0, 5
-	popw $t1
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
 	add $t0, $t0, $t1
 	ret

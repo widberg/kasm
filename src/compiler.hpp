@@ -24,6 +24,7 @@ namespace kasm
 		enum class ASTNodeType
 		{
 			INVALID,
+			DEAD,
 			COMPOUND_NODE,
 			RETURN,
 			LITERAL,
@@ -35,6 +36,7 @@ namespace kasm
 			IDENTIFIER,
 			TYPE,
 			IF_THEN_ELSE,
+			IF_THEN,
 			WHILE,
 			DO_WHILE,
 			FOR
@@ -43,7 +45,15 @@ namespace kasm
 		enum class BinaryOperator
 		{
 			ADD,
-			ASSIGNMENT
+			ASSIGNMENT,
+			LOGICAL_AND,
+			LOGICAL_OR,
+			LESS_THAN,
+			GREATER_THAN,
+			EQUAL,
+			NOT_EQUAL,
+			LESS_THAN_OR_EQUAL,
+			GREATER_THAN_OR_EQUAL
 		};
 
 		enum class UnaryOperator
@@ -51,7 +61,7 @@ namespace kasm
 			NEGATE,
 			INDIRECTION,
 			ADDRESS_OF,
-			NOT
+			LOGICAL_NOT
 		};
 
 		enum class Type
@@ -75,6 +85,7 @@ namespace kasm
 					{
 						delete statement;
 					}
+					asCompoundNode.body.~vector();
 					break;
 				case ASTNodeType::RETURN:
 					delete asReturn.condition;
@@ -85,6 +96,10 @@ namespace kasm
 					delete asFunctionDefinition.identifier;
 					delete asFunctionDefinition.arguments;
 					delete asFunctionDefinition.body;
+					break;
+				case ASTNodeType::FUNCTION_CALL:
+					delete asFunctionCall.identifier;
+					delete asFunctionCall.arguments;
 					break;
 				case ASTNodeType::BINARY_OPERATOR:
 					delete asBinaryOperator.lhs;
@@ -98,6 +113,7 @@ namespace kasm
 					delete asVariableDeclaration.type;
 					break;
 				case ASTNodeType::IDENTIFIER:
+					asIdentifier.identifier.~basic_string();
 					break;
 				case ASTNodeType::TYPE:
 					break;
@@ -105,6 +121,10 @@ namespace kasm
 					delete asIfThenElse.condition;
 					delete asIfThenElse.trueBody;
 					delete asIfThenElse.falseBody;
+					break;
+				case ASTNodeType::IF_THEN:
+					delete asIfThenElse.condition;
+					delete asIfThenElse.trueBody;
 					break;
 				case ASTNodeType::WHILE:
 					delete asWhile.condition;
@@ -186,6 +206,11 @@ namespace kasm
 				struct
 				{
 					ASTNode* condition;
+					ASTNode* trueBody;
+				} asIfThen;
+				struct
+				{
+					ASTNode* condition;
 					ASTNode* body;
 				} asWhile;
 				struct
@@ -214,9 +239,13 @@ namespace kasm
 		ASTNode* makeIdentifier(const std::string& identifier) const;
 		ASTNode* makeType(Type type) const;
 		ASTNode* makeIfThenElse(ASTNode* condition, ASTNode* trueBody, ASTNode* falseBody);
+		ASTNode* makeIfThen(ASTNode* condition, ASTNode* trueBody);
 		ASTNode* makeWhile(ASTNode* condition, ASTNode* body);
 		ASTNode* makeDoWhile(ASTNode* condition, ASTNode* body);
 		ASTNode* makeFor(ASTNode* initialize, ASTNode* condition, ASTNode* increment, ASTNode* body);
+
+		std::uint32_t getSizeOfType(Type type) const;
+		ASTNode* negate(ASTNode* astNode);
 
 		std::unordered_map<std::string, ASTNode*> symbolTable;
 
