@@ -169,7 +169,7 @@ kasm::AddressData returnAddress(kasm::Register::RA);
 
 %token ADD ADDI ADDIU ADDU AND ANDI BEQ BGEZ BGEZAL BGTZ BLEZ BLTZ BLTZAL BNE
 %token DIV DIVU J JAL JR LB LUI LW MFHI MFLO MULT MULTU OR ORI SB SLL SLLV NOR
-%token SLT SLTI SLTIU SLTU SRA SRL SRLV SUB SUBU SW SYS XOR XORI JALR
+%token SLT SLTI SLTIU SLTU SNE SEQ SRA SRL SRLV SUB SUBU SW SYS XOR XORI JALR
 
 %token COPY CLR B BAL BGT BLT BGE BLE BGTU BEQZ REM LI LA NOP NOT PUSHW POPW PUSHB POPB RET CALL ENTER
 
@@ -331,6 +331,8 @@ statement
 	| SLTI   REGISTER ',' REGISTER ',' LITERAL        end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(SLTI, $2, $4, $6); }
 	| SLTIU  REGISTER ',' REGISTER ',' LITERAL        end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(SLTIU, $2, $4, $6); }
 	| SLTU   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(SLTU, $2, $4, $6); }
+	| SNE    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(SNE, $2, $4, $6); }
+	| SEQ    REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(SEQ, $2, $4, $6); }
 	| SRA    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(SRA, $2, $4, $6); }
 	| SRL    REGISTER ',' REGISTER ',' LITERAL        end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRL(SRL, $2, $4, $6); }
 	| SRLV   REGISTER ',' REGISTER ',' REGISTER       end_of_statement { $$ = GET_LOC(); INSTRUCTION_RRR(SRLV, $2, $4, $6); }
@@ -795,6 +797,8 @@ yy::parser::symbol_type yy::yylex()
 		'slti'         { TOKEN(SLTI); }
 		'sltiu'       { TOKEN(SLTIU); }
 		'sltu'         { TOKEN(SLTU); }
+		'sne'           { TOKEN(SNE); }
+		'seq'           { TOKEN(SEQ); }
 		'sra'           { TOKEN(SRA); }
 		'srl'           { TOKEN(SRL); }
 		'srlv'         { TOKEN(SRLV); }

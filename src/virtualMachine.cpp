@@ -196,6 +196,14 @@ namespace kasm
                 registers[d.register0] = registers[d.register1] < registers[d.register2];
                 advancePc();
                 break;
+            case SNE:
+                registers[d.register0] = registers[d.register1] != registers[d.register2];
+                advancePc();
+                break;
+            case SEQ:
+                registers[d.register0] = registers[d.register1] == registers[d.register2];
+                advancePc();
+                break;
             case SRA:
                 registers[d.register0] = (registers[d.register1] >> d.immediate) | ~(~0U >> d.immediate);
                 advancePc();

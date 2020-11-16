@@ -37,6 +37,13 @@ namespace kasm
 		cyy::location loc;
 		ast::Node* astRoot;
 
+		enum class ParseFlag
+		{
+			NONE,
+			BLOCK_AS_STRING
+		};
+		ParseFlag parseFlag = ParseFlag::NONE;
+
 		friend class cyy::parser;
 		friend cyy::parser::symbol_type cyy::yylex(kasm::Compiler& compiler);
 	};

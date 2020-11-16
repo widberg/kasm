@@ -45,17 +45,22 @@ namespace cyy { parser::symbol_type yylex(kasm::Compiler& compiler); }
 
 %token END_OF_FILE 0
 
-%token RETURN INCLUDE
+%token RETURN INCLUDE ASM WHILE IF ELSE FOR
+
+%token EQUAL LESS_THAN_OR_EQUAL LOGICAL_AND
 
 %token<std::string> IDENTIFIER STRING
 %token<std::uint32_t> LITERAL
 %token<kasm::ast::Type> TYPE
 
-%type<kasm::ast::Node*> statement compound_statement expression expression_or_nothing function_definition identifier literal type
+%type<kasm::ast::Node*> statement compound_statement expression expression_or_nothing function_definition identifier literal type string_literal
 
 %right ','
-%left '+' '-' 
-%left '*' '/' '@'
+%right '='
+%right LOGICAL_AND
+%right EQUAL LESS_THAN_OR_EQUAL
+%left '+' '-'
+%left '*' '/' '%'
 %left '~'
 
 %start program
@@ -72,6 +77,12 @@ statement
 	: ';' { $$ = kasm::ast::makeEmpty(); }
 	| expression ';' { $$ = $1; }
 	| RETURN expression ';' { $$ = kasm::ast::makeReturn($2); }
+	| ASM '{' { compiler.parseFlag = kasm::Compiler::ParseFlag::BLOCK_AS_STRING; } STRING {compiler.parseFlag = kasm::Compiler::ParseFlag::NONE;} ';' { $$ = kasm::ast::makeASM($4); }
+	| '{' compound_statement '}' { $$ = $2; }
+	| IF '(' expression ')' statement { $$ = kasm::ast::makeIfThen($3, $5); }
+	| IF '(' expression ')' statement ELSE statement { $$ = kasm::ast::makeIfThenElse($3, $5, $7); }
+	| WHILE '(' expression ')' statement { $$ = kasm::ast::makeWhile($3, $5); }
+	| FOR '(' expression_or_nothing ';' expression_or_nothing ';' expression_or_nothing ')' statement { $$ = kasm::ast::makeFor($3, $5, $7, $9); }
 	;
 
 compound_statement
@@ -81,12 +92,17 @@ compound_statement
 
 expression
 	: expression '+' expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::ADD, $1, $3); }
+	| expression '%' expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::MODULUS, $1, $3); }
 	| expression '=' expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::ASSIGNMENT, $1, $3); }
 	| identifier '(' expression_or_nothing ')' { $$ = kasm::ast::makeFunctionCall($1, $3); }
 	| expression ',' expression { $$ = kasm::ast::makeCompound($1, $3); }
 	| identifier ':' type { $$ = kasm::ast::makeVariableDeclaration($1, $3); }
+	| expression EQUAL expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::EQUAL, $1, $3); }
+	| expression LESS_THAN_OR_EQUAL expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::LESS_THAN_OR_EQUAL, $1, $3); }
+	| expression LOGICAL_AND expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::LOGICAL_AND, $1, $3); }
 	| literal { $$ = $1; }
 	| identifier { $$ = $1; }
+	| string_literal { $$ = $1; }
 	;
 
 expression_or_nothing
@@ -108,6 +124,10 @@ identifier
 
 literal
 	: LITERAL { $$ = kasm::ast::makeLiteral($1); }
+	;
+
+string_literal
+	: STRING { $$ = kasm::ast::makeStringLiteral($1); }
 	;
 
 %%
@@ -144,12 +164,27 @@ static std::string lexStringLiteral(kasm::CompoundInputFileStream& in)
 		
 		"\n" { throw std::exception("Unclosed string"); }
 
-		"\\"([abfnrtv]|"\\"|"\'"|"\"") { str.push_back(ESCAPE_SEQUENCES.at(yych)); continue; }
+		"\\"([abfnrtv]|"\\"|"\'"|"\"") { str.push_back('\\'); str.push_back(yych); continue; }
 		[^\\"\""] { str.push_back(yych); continue; }
 
 		"\"" { break; }
 		* { throw std::exception("Illegal escape character in string"); }
 		%}
+	}
+
+	return str;
+}
+
+static std::string blockAsString(kasm::CompoundInputFileStream& in)
+{
+	std::string str;
+	
+	char c;
+	for (;;)
+	{
+		in.get(c);
+		if (c == '}') break;
+		str.push_back(c);
 	}
 
 	return str;
@@ -184,6 +219,15 @@ cyy::parser::symbol_type cyy::yylex(kasm::Compiler& compiler)
 #define TOKEN(name) do { return parser::make_##name(compiler.loc); } while(0)
 #define TOKENV(name, ...) do { return parser::make_##name(__VA_ARGS__, compiler.loc); } while(0)
 
+	switch (compiler.parseFlag)
+	{
+	case kasm::Compiler::ParseFlag::BLOCK_AS_STRING:
+		TOKENV(STRING, blockAsString(compiler.in));
+		break;
+	default:
+		break;
+	}
+
 	for (;;)
 	{
 		%{ /* Begin re2c lexer */
@@ -206,12 +250,23 @@ cyy::parser::symbol_type cyy::yylex(kasm::Compiler& compiler)
 
 		// Keywords
 		"return"           { TOKEN(RETURN); }
+		"asm"                 { TOKEN(ASM); }
+		"while"                 { TOKEN(WHILE); }
+		"if"                 { TOKEN(IF); }
+		"else"                 { TOKEN(ELSE); }
+		"for"                 { TOKEN(FOR); }
+		
+		"=="                 { TOKEN(EQUAL); }
+		"<="                 { TOKEN(LESS_THAN_OR_EQUAL); }
+		"&&"                 { TOKEN(LOGICAL_AND); }
 
 		// Types
 		"u8"           { TOKENV(TYPE, kasm::ast::Type::U8); }
 		"u32"           { TOKENV(TYPE, kasm::ast::Type::U32); }
 		"28"           { TOKENV(TYPE, kasm::ast::Type::S8); }
 		"s32"           { TOKENV(TYPE, kasm::ast::Type::S32); }
+		"void"           { TOKENV(TYPE, kasm::ast::Type::VOID); }
+		"type"           { TOKENV(TYPE, kasm::ast::Type::TYPE); }
 
 		// Identifier
 		@s [a-zA-Z_][a-zA-Z_0-9]* @e { TOKENV(IDENTIFIER, GET_STRING()); }
@@ -234,7 +289,7 @@ cyy::parser::symbol_type cyy::yylex(kasm::Compiler& compiler)
 		@s "//"[^\r\n]* @e { continue; }
 
 		// Single character operators
-		@s [:,+(){}*-/.<>@&|~?;=] @e { return parser::symbol_type(parser::token_type(GET_CHAR()), compiler.loc); }
+		@s [:,+(){}*-/.<>@&|~?;=%] @e { return parser::symbol_type(parser::token_type(GET_CHAR()), compiler.loc); }
 
 		@s * @e { throw std::exception(std::string("Invalid character of value: " + std::to_string(GET_CHAR())).c_str()); }
 		%}

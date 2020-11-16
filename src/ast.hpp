@@ -25,12 +25,15 @@ namespace kasm
 			IF_THEN,
 			WHILE,
 			DO_WHILE,
-			FOR
+			FOR,
+			STRING_LITERAL,
+			ASM
 		};
 
 		enum class BinaryOperator
 		{
 			ADD,
+			MODULUS,
 			ASSIGNMENT,
 			LOGICAL_AND,
 			LOGICAL_OR,
@@ -125,6 +128,13 @@ namespace kasm
 					delete asFor.condition;
 					delete asFor.increment;
 					delete asFor.body;
+					break;
+				case NodeType::STRING_LITERAL:
+					asStringLiteral.str.~basic_string();
+					break;
+				case NodeType::ASM:
+					asASM.source.~basic_string();
+					break;
 				default:
 					break;
 				}
@@ -212,6 +222,14 @@ namespace kasm
 					Node* increment;
 					Node* body;
 				} asFor;
+				struct
+				{
+					std::string str;
+				} asStringLiteral;
+				struct
+				{
+					std::string source;
+				} asASM;
 			};
 		};
 
@@ -231,5 +249,7 @@ namespace kasm
 		Node* makeWhile(Node* condition, Node* body);
 		Node* makeDoWhile(Node* condition, Node* body);
 		Node* makeFor(Node* initialize, Node* condition, Node* increment, Node* body);
+		Node* makeStringLiteral(const std::string& str);
+		Node* makeASM(const std::string& source);
 	}
 }

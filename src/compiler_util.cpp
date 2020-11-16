@@ -238,6 +238,12 @@ namespace kasm
 			prettyPrint(astNode->asFor.increment, level + 1);
 			prettyPrint(astNode->asFor.body, level + 1);
 			break;
+		case ast::NodeType::STRING_LITERAL:
+			std::cout << "STRING_LITERAL(\"" + astNode->asStringLiteral.str + "\");" << std::endl;
+			break;
+		case ast::NodeType::ASM:
+			std::cout << "ASM(\"" + astNode->asASM.source + "\");" << std::endl;
+			break;
 		default:
 			throw std::exception("Illegal ast::NodeType");
 			break;
@@ -311,6 +317,29 @@ namespace kasm
 			}
 			break;
 		case ast::NodeType::IDENTIFIER:
+			break;
+		case ast::NodeType::STRING_LITERAL:
+			break;
+		case ast::NodeType::ASM:
+			break;
+		case ast::NodeType::WHILE:
+			semanticAnalysis(astNode->asWhile.condition);
+			semanticAnalysis(astNode->asWhile.body);
+			break;
+		case ast::NodeType::IF_THEN:
+			semanticAnalysis(astNode->asIfThen.condition);
+			semanticAnalysis(astNode->asIfThen.trueBody);
+			break;
+		case ast::NodeType::IF_THEN_ELSE:
+			semanticAnalysis(astNode->asIfThenElse.condition);
+			semanticAnalysis(astNode->asIfThenElse.trueBody);
+			semanticAnalysis(astNode->asIfThenElse.falseBody);
+			break;
+		case ast::NodeType::FOR:
+			semanticAnalysis(astNode->asFor.initialize);
+			semanticAnalysis(astNode->asFor.condition);
+			semanticAnalysis(astNode->asFor.increment);
+			semanticAnalysis(astNode->asFor.body);
 			break;
 		default:
 			throw std::exception("Illegal ast::NodeType");
@@ -485,11 +514,31 @@ namespace kasm
 				codeGeneration(astNode->asBinaryOperator.rhs);
 				writeLine("\taddi $gp, $gp, -4");
 				writeLine("\tlw $t1, 0($gp)");
-				writeLine("\tadd $t0, $t0, $t1");
+				writeLine("\tadd $t0, $t1, $t0");
+				break;
+			case ast::BinaryOperator::MODULUS:
+				codeGeneration(astNode->asBinaryOperator.lhs);
+				writeLine("\tsw $t0, 0($gp)");
+				writeLine("\taddi $gp, $gp, 4");
+				codeGeneration(astNode->asBinaryOperator.rhs);
+				writeLine("\taddi $gp, $gp, -4");
+				writeLine("\tlw $t1, 0($gp)");
+				writeLine("\trem $t0, $t1, $t0");
 				break;
 			case ast::BinaryOperator::ASSIGNMENT:
 				codeGeneration(astNode->asBinaryOperator.rhs);
 				writeLine("\tsb $t0, " + astNode->asBinaryOperator.lhs->asIdentifier.identifier);
+				break;
+			case ast::BinaryOperator::LOGICAL_AND:
+				codeGeneration(astNode->asBinaryOperator.lhs);
+				writeLine("\tsw $t0, 0($gp)");
+				writeLine("\taddi $gp, $gp, 4");
+				codeGeneration(astNode->asBinaryOperator.rhs);
+				writeLine("\taddi $gp, $gp, -4");
+				writeLine("\tlw $t1, 0($gp)");
+				writeLine("\tsne $t0, $t0, $zero");
+				writeLine("\tsne $t1, $t1, $zero");
+				writeLine("\tand $t0, $t1, $t0");
 				break;
 			case ast::BinaryOperator::EQUAL:
 				codeGeneration(astNode->asBinaryOperator.lhs);
@@ -498,7 +547,7 @@ namespace kasm
 				codeGeneration(astNode->asBinaryOperator.rhs);
 				writeLine("\taddi $gp, $gp, -4");
 				writeLine("\tlw $t1, 0($gp)");
-				writeLine("\tsub $t0, $t0, $t1");
+				writeLine("\tseq $t0, $t1, $t0");
 				break;
 			case ast::BinaryOperator::NOT_EQUAL:
 				codeGeneration(astNode->asBinaryOperator.lhs);
@@ -507,8 +556,7 @@ namespace kasm
 				codeGeneration(astNode->asBinaryOperator.rhs);
 				writeLine("\taddi $gp, $gp, -4");
 				writeLine("\tlw $t1, 0($gp)");
-				writeLine("\tsub $t0, $t0, $t1");
-				writeLine("\tnot $t0, $t0");
+				writeLine("\tsne $t0, $t1, $t0");
 				break;
 			case ast::BinaryOperator::LESS_THAN:
 				codeGeneration(astNode->asBinaryOperator.lhs);
@@ -517,7 +565,7 @@ namespace kasm
 				codeGeneration(astNode->asBinaryOperator.rhs);
 				writeLine("\taddi $gp, $gp, -4");
 				writeLine("\tlw $t1, 0($gp)");
-				writeLine("\tslt $t0, $t0, $t1");
+				writeLine("\tslt $t0, $t1, $t0");
 				break;
 			case ast::BinaryOperator::LESS_THAN_OR_EQUAL:
 				codeGeneration(astNode->asBinaryOperator.lhs);
@@ -526,8 +574,8 @@ namespace kasm
 				codeGeneration(astNode->asBinaryOperator.rhs);
 				writeLine("\taddi $gp, $gp, -4");
 				writeLine("\tlw $t1, 0($gp)");
-				writeLine("\tslt $t2, $t0, $t1");
-				writeLine("\tsub $t0, $t0, $t1");
+				writeLine("\tslt $t2, $t1, $t0");
+				writeLine("\tseq $t0, $t0, $t1");
 				writeLine("\tor $t0, $t0, $t2");
 				break;
 			case ast::BinaryOperator::GREATER_THAN:
@@ -607,6 +655,19 @@ namespace kasm
 			{
 				writeLine("\tlb $t0, " + astNode->asIdentifier.identifier);
 			}
+			break;
+		case ast::NodeType::STRING_LITERAL:
+			{
+				std::uint32_t stringLabel = uid++;
+				writeLine(".data");
+				writeLine("_" + std::to_string(stringLabel) + ":");
+				writeLine("\t.asciiz \"" + astNode->asStringLiteral.str + "\"");
+				writeLine(".text");
+				writeLine("\tla $t0, _" + std::to_string(stringLabel));
+			}
+			break;
+		case ast::NodeType::ASM:
+			writeLine(astNode->asASM.source);
 			break;
 		default:
 			throw std::exception("Illegal ast::NodeType");

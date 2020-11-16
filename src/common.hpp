@@ -97,6 +97,8 @@ namespace kasm
         SLTI,
         SLTIU,
         SLTU,
+        SNE,
+        SEQ,
         SRA,
         SRL,
         SRLV,

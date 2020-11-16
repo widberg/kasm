@@ -6,6 +6,145 @@ x:
 .text
 	li $t0, 2
 	sb $t0, x
+.data
+i:
+	.space 1
+.text
+	li $t0, 1
+	sb $t0, i
+	lb $t0, i
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 100
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	slt $t2, $t1, $t0
+	seq $t0, $t0, $t1
+	or $t0, $t0, $t2
+	beqz $t0, _2
+_0:
+	lb $t0, i
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 3
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	rem $t0, $t1, $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 0
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	seq $t0, $t1, $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	lb $t0, i
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 5
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	rem $t0, $t1, $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 0
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	seq $t0, $t1, $t0
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	sne $t0, $t0, $zero
+	sne $t1, $t1, $zero
+	and $t0, $t1, $t0
+	beqz $t0, _4
+.data
+_5:
+	.asciiz "fizzbuzz\n"
+.text
+	la $t0, _5
+	copy $4, $t0
+	call print
+	b _3
+_4:
+	lb $t0, i
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 3
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	rem $t0, $t1, $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 0
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	seq $t0, $t1, $t0
+	beqz $t0, _7
+.data
+_8:
+	.asciiz "fizz\n"
+.text
+	la $t0, _8
+	copy $4, $t0
+	call print
+	b _6
+_7:
+	lb $t0, i
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 5
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	rem $t0, $t1, $t0
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 0
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	seq $t0, $t1, $t0
+	beqz $t0, _10
+.data
+_11:
+	.asciiz "buzz\n"
+.text
+	la $t0, _11
+	copy $4, $t0
+	call print
+	b _9
+_10:
+	lb $t0, i
+	copy $4, $t0
+	call printi
+.data
+_12:
+	.asciiz "\n"
+.text
+	la $t0, _12
+	copy $4, $t0
+	call print
+_9:
+_6:
+_3:
+_1:
+	lb $t0, i
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 1
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	add $t0, $t1, $t0
+	sb $t0, i
+	lb $t0, i
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	li $t0, 100
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	slt $t2, $t1, $t0
+	seq $t0, $t0, $t1
+	or $t0, $t0, $t2
+	bne $t0, $zero, _0
+_2:
 	li $t0, 10
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
@@ -14,7 +153,7 @@ x:
 	call test
 	addi $gp, $gp, -4
 	lw $t1, 0($gp)
-	add $t0, $t0, $t1
+	add $t0, $t1, $t0
 	copy $a0, $t0
 	li $v0, 0
 	sys
@@ -29,6 +168,24 @@ test:
 	li $t0, 5
 	addi $gp, $gp, -4
 	lw $t1, 0($gp)
-	add $t0, $t0, $t1
+	add $t0, $t1, $t0
 	ret
+	ret
+printi:
+	enter
+	addi $sp, $sp, -4
+	sw $8, -4($fp)
+
+		li $v0, 2
+		sys
+	
+	ret
+print:
+	enter
+	addi $sp, $sp, -4
+	sw $8, -4($fp)
+
+		li $v0, 6
+		sys
+	
 	ret

@@ -150,5 +150,21 @@ namespace kasm
 			astNode->asFor.body = body;
 			return astNode;
 		}
+
+		Node* makeStringLiteral(const std::string& str)
+		{
+			Node* astNode = new Node;
+			astNode->astNodeType = NodeType::STRING_LITERAL;
+			new (&astNode->asStringLiteral.str) std::string(str);
+			return astNode;
+		}
+
+		Node* makeASM(const std::string& source)
+		{
+			Node* astNode = new Node;
+			astNode->astNodeType = NodeType::ASM;
+			new (&astNode->asASM.source) std::string(source);
+			return astNode;
+		}
 	}
 }
