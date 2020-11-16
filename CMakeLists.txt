@@ -11,7 +11,7 @@ add_executable(kasm
 	src/compoundInputFileStream.cpp src/compoundInputFileStream.hpp
 	src/assembler.hpp src/assembler.cpp src/assembler.yy src/assembler_util.cpp
 	src/binaryBuilder.hpp src/binaryBuilder.cpp
-	src/compiler.hpp src/compiler.cpp src/compiler.yy src/compiler_util.cpp
+	src/compiler.hpp src/compiler.cpp src/compiler.yy src/compiler_util.cpp src/ast.cpp src/ast.hpp
 	src/debugger.cpp src/debugger.hpp
 	src/disassembler.hpp src/disassembler.cpp
 	src/virtualMachine.hpp src/virtualMachine.cpp
@@ -21,7 +21,7 @@ add_executable(kasm
 add_custom_target(kasm_grammar ALL
 	COMMAND bison assembler.yy -o assembler.cpp.re
 	COMMAND re2c assembler.cpp.re -o assembler.cpp --no-debug-info
-	COMMAND bison compiler.yy -o compiler.cpp.re
+	COMMAND bison compiler.yy -o compiler.cpp.re --defines=compiler.tab.hpp
 	COMMAND re2c compiler.cpp.re -o compiler.cpp --no-debug-info
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src
 )

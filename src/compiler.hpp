@@ -6,6 +6,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "ast.hpp"
+#include "compoundInputFileStream.hpp"
+#include "compiler.tab.hpp"
+
 namespace kasm
 {
 	class Compiler
@@ -21,237 +25,19 @@ namespace kasm
 
 		std::ofstream asmFile;
 
-		enum class ASTNodeType
-		{
-			INVALID,
-			DEAD,
-			COMPOUND_NODE,
-			RETURN,
-			LITERAL,
-			FUNCTION_DEFINITION,
-			FUNCTION_CALL,
-			BINARY_OPERATOR,
-			UNARY_OPERATOR,
-			VARIABLE_DECLARATION,
-			IDENTIFIER,
-			TYPE,
-			IF_THEN_ELSE,
-			IF_THEN,
-			WHILE,
-			DO_WHILE,
-			FOR
-		};
+		static std::uint32_t getSizeOfType(ast::Type type);
+		static ast::Node* negate(ast::Node* astNode);
 
-		enum class BinaryOperator
-		{
-			ADD,
-			ASSIGNMENT,
-			LOGICAL_AND,
-			LOGICAL_OR,
-			LESS_THAN,
-			GREATER_THAN,
-			EQUAL,
-			NOT_EQUAL,
-			LESS_THAN_OR_EQUAL,
-			GREATER_THAN_OR_EQUAL
-		};
+		static void prettyPrint(const ast::Node* astNode, unsigned int level = 0);
+		void semanticAnalysis(ast::Node* astNode);
+		void optimize(const ast::Node* astNode);
+		void codeGeneration(const ast::Node* astNode);
 
-		enum class UnaryOperator
-		{
-			NEGATE,
-			INDIRECTION,
-			ADDRESS_OF,
-			LOGICAL_NOT
-		};
+		CompoundInputFileStream in;
+		cyy::location loc;
+		ast::Node* astRoot;
 
-		enum class Type
-		{
-			VOID,
-			TYPE,
-			U8
-		};
-
-		struct ASTNode
-		{
-			ASTNode()
-				: astNodeType(ASTNodeType::INVALID) {};
-
-			~ASTNode()
-			{
-				switch (astNodeType)
-				{
-				case ASTNodeType::COMPOUND_NODE:
-					for (ASTNode* statement : asCompoundNode.body)
-					{
-						delete statement;
-					}
-					asCompoundNode.body.~vector();
-					break;
-				case ASTNodeType::RETURN:
-					delete asReturn.condition;
-					break;
-				case ASTNodeType::LITERAL:
-					break;
-				case ASTNodeType::FUNCTION_DEFINITION:
-					delete asFunctionDefinition.identifier;
-					delete asFunctionDefinition.arguments;
-					delete asFunctionDefinition.body;
-					break;
-				case ASTNodeType::FUNCTION_CALL:
-					delete asFunctionCall.identifier;
-					delete asFunctionCall.arguments;
-					break;
-				case ASTNodeType::BINARY_OPERATOR:
-					delete asBinaryOperator.lhs;
-					delete asBinaryOperator.rhs;
-					break;
-				case ASTNodeType::UNARY_OPERATOR:
-					delete asUnaryOperator.rhs;
-					break;
-				case ASTNodeType::VARIABLE_DECLARATION:
-					delete asVariableDeclaration.identifier;
-					delete asVariableDeclaration.type;
-					break;
-				case ASTNodeType::IDENTIFIER:
-					asIdentifier.identifier.~basic_string();
-					break;
-				case ASTNodeType::TYPE:
-					break;
-				case ASTNodeType::IF_THEN_ELSE:
-					delete asIfThenElse.condition;
-					delete asIfThenElse.trueBody;
-					delete asIfThenElse.falseBody;
-					break;
-				case ASTNodeType::IF_THEN:
-					delete asIfThenElse.condition;
-					delete asIfThenElse.trueBody;
-					break;
-				case ASTNodeType::WHILE:
-					delete asWhile.condition;
-					delete asWhile.body;
-					break;
-				case ASTNodeType::DO_WHILE:
-					delete asDoWhile.condition;
-					delete asDoWhile.body;
-					break;
-				case ASTNodeType::FOR:
-					delete asFor.initialize;
-					delete asFor.condition;
-					delete asFor.increment;
-					delete asFor.body;
-				default:
-					break;
-				}
-			};
-
-			ASTNodeType astNodeType;
-			union
-			{
-				struct
-				{
-					std::vector<ASTNode*> body;
-				} asCompoundNode;
-				struct
-				{
-					ASTNode* condition;
-					bool entry;
-				} asReturn;
-				struct
-				{
-					std::uint32_t value;
-				} asLiteral;
-				struct
-				{
-					ASTNode* identifier;
-					ASTNode* type;
-					ASTNode* arguments;
-					ASTNode* body;
-					bool entry;
-				} asFunctionDefinition;
-				struct
-				{
-					ASTNode* identifier;
-					ASTNode* arguments;
-				} asFunctionCall;
-				struct
-				{
-					BinaryOperator op;
-					ASTNode* lhs;
-					ASTNode* rhs;
-				} asBinaryOperator;
-				struct
-				{
-					UnaryOperator op;
-					ASTNode* rhs;
-				} asUnaryOperator;
-				struct
-				{
-					ASTNode* identifier;
-					ASTNode* type;
-				} asVariableDeclaration;
-				struct
-				{
-					std::string identifier;
-				} asIdentifier;
-				struct
-				{
-					Type type;
-				} asType;
-				struct
-				{
-					ASTNode* condition;
-					ASTNode* trueBody;
-					ASTNode* falseBody;
-				} asIfThenElse;
-				struct
-				{
-					ASTNode* condition;
-					ASTNode* trueBody;
-				} asIfThen;
-				struct
-				{
-					ASTNode* condition;
-					ASTNode* body;
-				} asWhile;
-				struct
-				{
-					ASTNode* condition;
-					ASTNode* body;
-				} asDoWhile;
-				struct
-				{
-					ASTNode* initialize;
-					ASTNode* condition;
-					ASTNode* increment;
-					ASTNode* body;
-				} asFor;
-			};
-		};
-
-		ASTNode* makeCompoundNode(const std::vector<ASTNode*>& nodes) const;
-		ASTNode* makeReturn(ASTNode* expression) const;
-		ASTNode* makeLiteral(std::uint32_t value) const;
-		ASTNode* makeFunctionDefinition(ASTNode* identifier, ASTNode* type, ASTNode* arguments, ASTNode* body) const;
-		ASTNode* makeFunctionCall(ASTNode* identifier, ASTNode* arguments) const;
-		ASTNode* makeBinaryOperator(BinaryOperator op, ASTNode* lhs, ASTNode* rhs) const;
-		ASTNode* makeUnaryOperator(UnaryOperator op, ASTNode* rhs) const;
-		ASTNode* makeVariableDeclaration(ASTNode* identifier, ASTNode* type) const;
-		ASTNode* makeIdentifier(const std::string& identifier) const;
-		ASTNode* makeType(Type type) const;
-		ASTNode* makeIfThenElse(ASTNode* condition, ASTNode* trueBody, ASTNode* falseBody);
-		ASTNode* makeIfThen(ASTNode* condition, ASTNode* trueBody);
-		ASTNode* makeWhile(ASTNode* condition, ASTNode* body);
-		ASTNode* makeDoWhile(ASTNode* condition, ASTNode* body);
-		ASTNode* makeFor(ASTNode* initialize, ASTNode* condition, ASTNode* increment, ASTNode* body);
-
-		std::uint32_t getSizeOfType(Type type) const;
-		ASTNode* negate(ASTNode* astNode);
-
-		std::unordered_map<std::string, ASTNode*> symbolTable;
-
-		void prettyPrint(const ASTNode* astNode, unsigned int level = 0) const;
-		void semanticAnalysis(ASTNode* astNode);
-		void optimize(const ASTNode* astNode);
-		void codeGeneration(const ASTNode* astNode);
+		friend class cyy::parser;
+		friend cyy::parser::symbol_type cyy::yylex(kasm::Compiler& compiler);
 	};
 }

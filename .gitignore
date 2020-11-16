@@ -39,3 +39,6 @@
 
 # re2c
 *.cpp.re
+
+# temporary files
+~*

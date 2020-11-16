@@ -1,7 +1,11 @@
-void entry()
+entry() : u8
 {
-	x : uint8;
+	x : u8;
 	x = 2;
-	x = x + x + x;
-	return x;
+	return 10 + test(x);
+}
+
+test(x : u32) : u32
+{
+	return x + 5;
 }

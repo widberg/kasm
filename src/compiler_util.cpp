@@ -17,33 +17,18 @@ namespace kasm
 
 	void Compiler::compile(const std::string& sourcePath, const std::string& asmPath)
 	{
-		symbolTable.clear();
+		in.open(sourcePath);
+		loc.begin.filename = &in.getIdentifier();
+		loc.end.filename = &in.getIdentifier();
+		cyy::parser parser(*this);
+		int status = parser.parse();
 
-		std::ifstream sourceFile(sourcePath);
 		asmFile.open(asmPath);
+		prettyPrint(astRoot);
+		semanticAnalysis(astRoot);
+		codeGeneration(astRoot);
 
-		ASTNode* ast =
-			makeCompoundNode({
-				makeFunctionDefinition(makeIdentifier("entry"), makeType(Type::U8), makeCompoundNode({}), // entry() : u8
-				makeCompoundNode({ // {
-					makeVariableDeclaration(makeIdentifier("x"), makeType(Type::U8)), // x : u8;
-					makeBinaryOperator(BinaryOperator::ASSIGNMENT, makeIdentifier("x"), makeLiteral(2)), // x = 2;
-					makeBinaryOperator(BinaryOperator::ASSIGNMENT, makeIdentifier("x"), makeBinaryOperator(BinaryOperator::ADD, makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(3)), makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(3)))), // x = x + x + 3;
-					makeReturn(makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeFunctionCall(makeIdentifier("test"), makeCompoundNode({ makeIdentifier("x") })))), // return x + 5;
-				})), // }
-
-				makeFunctionDefinition(makeIdentifier("test"), makeType(Type::U8), makeCompoundNode({ makeVariableDeclaration(makeIdentifier("x"), makeType(Type::U8)) }), // u8 test(x : u8)
-				makeCompoundNode({ // {
-					makeBinaryOperator(BinaryOperator::ASSIGNMENT, makeIdentifier("x"), makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(3))), // x = x + 3;
-					makeReturn(makeBinaryOperator(BinaryOperator::ADD, makeIdentifier("x"), makeLiteral(5))), // return x + 5;
-				})), // }
-			});
-
-		prettyPrint(ast);
-		semanticAnalysis(ast);
-		codeGeneration(ast);
-
-		delete ast;
+		delete astRoot;
 	}
 
 	void Compiler::writeLine(const std::string& line)
@@ -52,218 +37,88 @@ namespace kasm
 		std::cout << line << std::endl;
 	}
 
-	Compiler::ASTNode* Compiler::makeCompoundNode(const std::vector<ASTNode*>& body) const
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::COMPOUND_NODE;
-		new (&astNode->asCompoundNode.body) std::vector<ASTNode*>(body);
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeReturn(ASTNode* expression) const
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::RETURN;
-		astNode->asReturn.condition = expression;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeLiteral(std::uint32_t value) const
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::LITERAL;
-		astNode->asLiteral.value = value;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeFunctionDefinition(ASTNode* identifier, ASTNode* type, ASTNode* arguments, ASTNode* body) const
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::FUNCTION_DEFINITION;
-		astNode->asFunctionDefinition.identifier = identifier;
-		astNode->asFunctionDefinition.type = type;
-		astNode->asFunctionDefinition.arguments = arguments;
-		astNode->asFunctionDefinition.body = body;
-		astNode->asFunctionDefinition.entry = identifier->asIdentifier.identifier == "entry";
-		return astNode;
-	}
 
 
-	Compiler::ASTNode* Compiler::makeFunctionCall(ASTNode* identifier, ASTNode* arguments) const
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::FUNCTION_CALL;
-		astNode->asFunctionCall.identifier = identifier;
-		astNode->asFunctionCall.arguments = arguments;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeBinaryOperator(BinaryOperator op, ASTNode* lhs, ASTNode* rhs) const
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::BINARY_OPERATOR;
-		astNode->asBinaryOperator.op = op;
-		astNode->asBinaryOperator.lhs = lhs;
-		astNode->asBinaryOperator.rhs = rhs;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeUnaryOperator(UnaryOperator op, ASTNode* rhs) const
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::UNARY_OPERATOR;
-		astNode->asUnaryOperator.op = op;
-		astNode->asUnaryOperator.rhs = rhs;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeVariableDeclaration(ASTNode* identifier, ASTNode* type) const
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::VARIABLE_DECLARATION;
-		astNode->asVariableDeclaration.identifier = identifier;
-		astNode->asVariableDeclaration.type = type;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeIdentifier(const std::string& identifier) const
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::IDENTIFIER;
-		new (&astNode->asIdentifier.identifier) std::string(identifier);
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeType(Type type) const
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::TYPE;
-		astNode->asType.type = type;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeIfThenElse(ASTNode* condition, ASTNode* trueBody, ASTNode* falseBody)
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::IF_THEN_ELSE;
-		astNode->asIfThenElse.condition = condition;
-		astNode->asIfThenElse.trueBody = trueBody;
-		astNode->asIfThenElse.falseBody = falseBody;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeIfThen(ASTNode* condition, ASTNode* trueBody)
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::IF_THEN;
-		astNode->asIfThen.condition = condition;
-		astNode->asIfThen.trueBody = trueBody;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeWhile(ASTNode* condition, ASTNode* body)
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::WHILE;
-		astNode->asWhile.condition = condition;
-		astNode->asWhile.body = body;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeDoWhile(ASTNode* condition, ASTNode* body)
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::DO_WHILE;
-		astNode->asDoWhile.condition = condition;
-		astNode->asDoWhile.body = body;
-		return astNode;
-	}
-
-	Compiler::ASTNode* Compiler::makeFor(ASTNode* initialize, ASTNode* condition, ASTNode* increment, ASTNode* body)
-	{
-		ASTNode* astNode = new ASTNode;
-		astNode->astNodeType = ASTNodeType::FOR;
-		astNode->asFor.initialize = initialize;
-		astNode->asFor.condition = condition;
-		astNode->asFor.increment = increment;
-		astNode->asFor.body = body;
-		return astNode;
-	}
-
-	std::uint32_t Compiler::getSizeOfType(Type type) const
+	std::uint32_t Compiler::getSizeOfType(ast::Type type)
 	{
 		switch (type)
 		{
-		case kasm::Compiler::Type::VOID:
+		case ast::Type::VOID:
 			return 0;
-		case kasm::Compiler::Type::TYPE:
+		case ast::Type::TYPE:
 			return 0;
-		case kasm::Compiler::Type::U8:
+		case ast::Type::U8:
 			return 1;
+		case ast::Type::U32:
+			return 4;
+		case ast::Type::S8:
+			return 1;
+		case ast::Type::S32:
+			return 4;
 		default:
-			break;
+			return 0;
 		}
 	}
 
-	Compiler::ASTNode* Compiler::negate(ASTNode* astNode)
+	ast::Node* Compiler::negate(ast::Node* astNode)
 	{
 		switch (astNode->astNodeType)
 		{
-		case ASTNodeType::BINARY_OPERATOR:
+		case ast::NodeType::BINARY_OPERATOR:
 			astNode->asBinaryOperator.lhs = negate(astNode->asBinaryOperator.lhs);
 			astNode->asBinaryOperator.rhs = negate(astNode->asBinaryOperator.rhs);
 			switch (astNode->asBinaryOperator.op)
 			{
-			case BinaryOperator::LOGICAL_AND:
-				astNode->asBinaryOperator.op = BinaryOperator::LOGICAL_OR;
+			case ast::BinaryOperator::LOGICAL_AND:
+				astNode->asBinaryOperator.op = ast::BinaryOperator::LOGICAL_OR;
 				break;
-			case BinaryOperator::LOGICAL_OR:
-				astNode->asBinaryOperator.op = BinaryOperator::LOGICAL_AND;
+			case ast::BinaryOperator::LOGICAL_OR:
+				astNode->asBinaryOperator.op = ast::BinaryOperator::LOGICAL_AND;
 				break;
-			case BinaryOperator::LESS_THAN:
-				astNode->asBinaryOperator.op = BinaryOperator::GREATER_THAN_OR_EQUAL;
+			case ast::BinaryOperator::LESS_THAN:
+				astNode->asBinaryOperator.op = ast::BinaryOperator::GREATER_THAN_OR_EQUAL;
 				break;
-			case BinaryOperator::GREATER_THAN:
-				astNode->asBinaryOperator.op = BinaryOperator::LESS_THAN_OR_EQUAL;
+			case ast::BinaryOperator::GREATER_THAN:
+				astNode->asBinaryOperator.op = ast::BinaryOperator::LESS_THAN_OR_EQUAL;
 				break;
-			case BinaryOperator::EQUAL:
-				astNode->asBinaryOperator.op = BinaryOperator::NOT_EQUAL;
+			case ast::BinaryOperator::EQUAL:
+				astNode->asBinaryOperator.op = ast::BinaryOperator::NOT_EQUAL;
 				break;
-			case BinaryOperator::NOT_EQUAL:
-				astNode->asBinaryOperator.op = BinaryOperator::EQUAL;
+			case ast::BinaryOperator::NOT_EQUAL:
+				astNode->asBinaryOperator.op = ast::BinaryOperator::EQUAL;
 				break;
-			case BinaryOperator::LESS_THAN_OR_EQUAL:
-				astNode->asBinaryOperator.op = BinaryOperator::LESS_THAN;
+			case ast::BinaryOperator::LESS_THAN_OR_EQUAL:
+				astNode->asBinaryOperator.op = ast::BinaryOperator::LESS_THAN;
 				break;
-			case BinaryOperator::GREATER_THAN_OR_EQUAL:
-				astNode->asBinaryOperator.op = BinaryOperator::LESS_THAN;
+			case ast::BinaryOperator::GREATER_THAN_OR_EQUAL:
+				astNode->asBinaryOperator.op = ast::BinaryOperator::LESS_THAN;
 				break;
 			default:
-				astNode = makeUnaryOperator(UnaryOperator::LOGICAL_NOT, astNode);
+				astNode = ast::makeUnaryOperator(ast::UnaryOperator::LOGICAL_NOT, astNode);
 				break;
 			}
 			break;
-		case ASTNodeType::UNARY_OPERATOR:
-			if (astNode->asUnaryOperator.op == UnaryOperator::LOGICAL_NOT)
+		case ast::NodeType::UNARY_OPERATOR:
+			if (astNode->asUnaryOperator.op == ast::UnaryOperator::LOGICAL_NOT)
 			{
-				ASTNode* tmp = astNode;
+				ast::Node* tmp = astNode;
 				astNode = astNode->asUnaryOperator.rhs;
-				tmp->astNodeType = ASTNodeType::DEAD;
+				tmp->astNodeType = ast::NodeType::EMPTY;
 				delete tmp;
 			}
 			else
 			{
-				astNode = makeUnaryOperator(UnaryOperator::LOGICAL_NOT, astNode);
+				astNode = ast::makeUnaryOperator(ast::UnaryOperator::LOGICAL_NOT, astNode);
 			}
 			break;
 		default:
-			astNode = makeUnaryOperator(UnaryOperator::LOGICAL_NOT, astNode);
+			astNode = ast::makeUnaryOperator(ast::UnaryOperator::LOGICAL_NOT, astNode);
 			break;
 		}
 		return astNode;
 	}
 
-	void Compiler::prettyPrint(const ASTNode* astNode, unsigned int level) const
+	void Compiler::prettyPrint(const ast::Node* astNode, unsigned int level)
 	{
 		for (unsigned int i = 0; i < level; i++)
 		{
@@ -272,40 +127,41 @@ namespace kasm
 
 		switch (astNode->astNodeType)
 		{
-		case ASTNodeType::COMPOUND_NODE:
-			std::cout << "COMPOUND_NODE:" << std::endl;
-			for (ASTNode* node : astNode->asCompoundNode.body)
-			{
-				prettyPrint(node, level + 1);
-			}
+		case ast::NodeType::EMPTY:
+			std::cout << "EMPTY" << std::endl;
 			break;
-		case ASTNodeType::RETURN:
+		case ast::NodeType::COMPOUND:
+			std::cout << "COMPOUND:" << std::endl;
+			prettyPrint(astNode->asCompound.first, level + 1);
+			prettyPrint(astNode->asCompound.second, level + 1);
+			break;
+		case ast::NodeType::RETURN:
 			std::cout << "RETURN:" << std::endl;
 			prettyPrint(astNode->asReturn.condition, level + 1);
 			break;
-		case ASTNodeType::LITERAL:
+		case ast::NodeType::LITERAL:
 			std::cout << "LITERAL(" << astNode->asLiteral.value << ");" << std::endl;
 			break;
-		case ASTNodeType::FUNCTION_DEFINITION:
+		case ast::NodeType::FUNCTION_DEFINITION:
 			std::cout << "FUNCTION_DEFINITION:" << std::endl;
 			prettyPrint(astNode->asFunctionDefinition.identifier, level + 1);
 			prettyPrint(astNode->asFunctionDefinition.type, level + 1);
 			prettyPrint(astNode->asFunctionDefinition.arguments, level + 1);
 			prettyPrint(astNode->asFunctionDefinition.body, level + 1);
 			break;
-		case ASTNodeType::FUNCTION_CALL:
+		case ast::NodeType::FUNCTION_CALL:
 			std::cout << "FUNCTION_CALL:" << std::endl;
 			prettyPrint(astNode->asFunctionCall.identifier, level + 1);
 			prettyPrint(astNode->asFunctionCall.arguments, level + 1);
 			break;
-		case ASTNodeType::BINARY_OPERATOR:
+		case ast::NodeType::BINARY_OPERATOR:
 			std::cout << "BINARY_OPERATOR(";
 			switch (astNode->asBinaryOperator.op)
 			{
-			case BinaryOperator::ADD:
+			case ast::BinaryOperator::ADD:
 				std::cout << "+";
 				break;
-			case BinaryOperator::ASSIGNMENT:
+			case ast::BinaryOperator::ASSIGNMENT:
 				std::cout << "=";
 				break;
 			default:
@@ -315,11 +171,11 @@ namespace kasm
 			prettyPrint(astNode->asBinaryOperator.lhs, level + 1);
 			prettyPrint(astNode->asBinaryOperator.rhs, level + 1);
 			break;
-		case ASTNodeType::UNARY_OPERATOR:
+		case ast::NodeType::UNARY_OPERATOR:
 			std::cout << "UNARY_OPERATOR(";
 			switch (astNode->asUnaryOperator.op)
 			{
-			case UnaryOperator::NEGATE:
+			case ast::UnaryOperator::NEGATE:
 				std::cout << "-";
 				break;
 			default:
@@ -328,25 +184,25 @@ namespace kasm
 			std::cout << "):" << std::endl;
 			prettyPrint(astNode->asUnaryOperator.rhs, level + 1);
 			break;
-		case ASTNodeType::VARIABLE_DECLARATION:
+		case ast::NodeType::VARIABLE_DECLARATION:
 			std::cout << "VARIABLE_DECLARATION:" << std::endl;
 			prettyPrint(astNode->asVariableDeclaration.identifier, level + 1);
 			prettyPrint(astNode->asVariableDeclaration.type, level + 1);
 			break;
-		case ASTNodeType::IDENTIFIER:
+		case ast::NodeType::IDENTIFIER:
 			std::cout << "IDENTIFIER(" << astNode->asIdentifier.identifier << ");" << std::endl;
 			break;
-		case ASTNodeType::TYPE:
+		case ast::NodeType::TYPE:
 			std::cout << "TYPE(";
 			switch (astNode->asType.type)
 			{
-			case Type::VOID:
+			case ast::Type::VOID:
 				std::cout << "void";
 				break;
-			case Type::TYPE:
+			case ast::Type::TYPE:
 				std::cout << "type";
 				break;
-			case Type::U8:
+			case ast::Type::U8:
 				std::cout << "u8";
 				break;
 			default:
@@ -354,28 +210,28 @@ namespace kasm
 			}
 			std::cout << ");" << std::endl;
 			break;
-		case ASTNodeType::IF_THEN_ELSE:
+		case ast::NodeType::IF_THEN_ELSE:
 			std::cout << "IF_THEN_ELSE:" << std::endl;
 			prettyPrint(astNode->asIfThenElse.condition, level + 1);
 			prettyPrint(astNode->asIfThenElse.trueBody, level + 1);
 			prettyPrint(astNode->asIfThenElse.falseBody, level + 1);
 			break;
-		case ASTNodeType::IF_THEN:
+		case ast::NodeType::IF_THEN:
 			std::cout << "IF_THEN:" << std::endl;
 			prettyPrint(astNode->asIfThen.condition, level + 1);
 			prettyPrint(astNode->asIfThen.trueBody, level + 1);
 			break;
-		case ASTNodeType::WHILE:
+		case ast::NodeType::WHILE:
 			std::cout << "WHILE:" << std::endl;
 			prettyPrint(astNode->asWhile.condition, level + 1);
 			prettyPrint(astNode->asWhile.body, level + 1);
 			break;
-		case ASTNodeType::DO_WHILE:
+		case ast::NodeType::DO_WHILE:
 			std::cout << "DO_WHILE:" << std::endl;
 			prettyPrint(astNode->asDoWhile.condition, level + 1);
 			prettyPrint(astNode->asDoWhile.body, level + 1);
 			break;
-		case ASTNodeType::FOR:
+		case ast::NodeType::FOR:
 			std::cout << "FOR:" << std::endl;
 			prettyPrint(astNode->asFor.initialize, level + 1);
 			prettyPrint(astNode->asFor.condition, level + 1);
@@ -383,104 +239,104 @@ namespace kasm
 			prettyPrint(astNode->asFor.body, level + 1);
 			break;
 		default:
-			throw std::exception("Illegal ASTNodeType");
+			throw std::exception("Illegal ast::NodeType");
 			break;
 		}
 	}
 
-	void Compiler::semanticAnalysis(ASTNode* astNode)
+	void Compiler::semanticAnalysis(ast::Node* astNode)
 	{
 		static bool entry = false;
 		switch (astNode->astNodeType)
 		{
-		case ASTNodeType::COMPOUND_NODE:
-			for (ASTNode* node : astNode->asCompoundNode.body)
-			{
-				semanticAnalysis(node);
-			}
+		case ast::NodeType::EMPTY:
 			break;
-		case ASTNodeType::RETURN:
+		case ast::NodeType::COMPOUND:
+			semanticAnalysis(astNode->asCompound.first);
+			semanticAnalysis(astNode->asCompound.second);
+			break;
+		case ast::NodeType::RETURN:
 			semanticAnalysis(astNode->asReturn.condition);
 			astNode->asReturn.entry = entry;
 			break;
-		case ASTNodeType::LITERAL:
+		case ast::NodeType::LITERAL:
 			break;
-		case ASTNodeType::FUNCTION_DEFINITION:
+		case ast::NodeType::FUNCTION_DEFINITION:
 			entry = astNode->asFunctionDefinition.entry;
 			semanticAnalysis(astNode->asFunctionDefinition.body);
 			break;
-		case ASTNodeType::FUNCTION_CALL:
+		case ast::NodeType::FUNCTION_CALL:
 			semanticAnalysis(astNode->asFunctionCall.arguments);
 			break;
-		case ASTNodeType::BINARY_OPERATOR:
+		case ast::NodeType::BINARY_OPERATOR:
 			switch (astNode->asBinaryOperator.op)
 			{
-			case BinaryOperator::ADD:
+			case ast::BinaryOperator::ADD:
 				semanticAnalysis(astNode->asBinaryOperator.lhs);
 				semanticAnalysis(astNode->asBinaryOperator.rhs);
 				break;
-			case BinaryOperator::ASSIGNMENT:
+			case ast::BinaryOperator::ASSIGNMENT:
 				semanticAnalysis(astNode->asBinaryOperator.rhs);
 				break;
 			default:
 				break;
 			}
 			break;
-		case ASTNodeType::UNARY_OPERATOR:
+		case ast::NodeType::UNARY_OPERATOR:
 			switch (astNode->asUnaryOperator.op)
 			{
-			case UnaryOperator::NEGATE:
+			case ast::UnaryOperator::NEGATE:
 				semanticAnalysis(astNode->asUnaryOperator.rhs);
 				break;
-			case UnaryOperator::INDIRECTION:
+			case ast::UnaryOperator::INDIRECTION:
 				semanticAnalysis(astNode->asUnaryOperator.rhs);
 				break;
-			case UnaryOperator::ADDRESS_OF:
+			case ast::UnaryOperator::ADDRESS_OF:
 				semanticAnalysis(astNode->asUnaryOperator.rhs);
 				break;
-			case UnaryOperator::LOGICAL_NOT:
+			case ast::UnaryOperator::LOGICAL_NOT:
 				semanticAnalysis(astNode->asUnaryOperator.rhs);
 				break;
 			default:
 				break;
 			}
 			break;
-		case ASTNodeType::VARIABLE_DECLARATION:
+		case ast::NodeType::VARIABLE_DECLARATION:
 			switch (astNode->asVariableDeclaration.type->asType.type)
 			{
-			case Type::U8:
+			case ast::Type::U8:
 				break;
 			default:
 				break;
 			}
 			break;
-		case ASTNodeType::IDENTIFIER:
+		case ast::NodeType::IDENTIFIER:
 			break;
 		default:
-			throw std::exception("Illegal ASTNodeType");
+			throw std::exception("Illegal ast::NodeType");
 			break;
 		}
 	}
 
-	void Compiler::optimize(const ASTNode* astNode)
+	void Compiler::optimize(const ast::Node* astNode)
 	{
 		// heck^2
 	}
 
-	void Compiler::codeGeneration(const ASTNode* astNode)
+	void Compiler::codeGeneration(const ast::Node* astNode)
 	{
 		static std::unordered_map<std::string, std::uint32_t> localVariables;
 		static std::uint32_t uid = 0;
 
 		switch (astNode->astNodeType)
 		{
-		case ASTNodeType::COMPOUND_NODE:
-			for (ASTNode* node : astNode->asCompoundNode.body)
-			{
-				codeGeneration(node);
-			}
+		case ast::NodeType::EMPTY:
 			break;
-		case ASTNodeType::RETURN:
+		case ast::NodeType::COMPOUND:
+			codeGeneration(astNode->asCompound.first);
+			codeGeneration(astNode->asCompound.second);
+			break;
+		case ast::NodeType::RETURN:
 			codeGeneration(astNode->asReturn.condition);
 			if (astNode->asReturn.entry)
 			{
@@ -493,10 +349,10 @@ namespace kasm
 				writeLine("\tret");
 			}
 			break;
-		case ASTNodeType::LITERAL:
+		case ast::NodeType::LITERAL:
 			writeLine("\tli $t0, " + std::to_string(astNode->asLiteral.value));
 			break;
-		case ASTNodeType::FUNCTION_DEFINITION:
+		case ast::NodeType::FUNCTION_DEFINITION:
 			{
 				writeLine(astNode->asFunctionDefinition.identifier->asIdentifier.identifier + ":");
 				if (!astNode->asFunctionDefinition.entry)
@@ -509,12 +365,23 @@ namespace kasm
 				}
 
 				std::uint32_t i = 4;
-				for (ASTNode* node : astNode->asFunctionDefinition.arguments->asCompoundNode.body)
+
+				ast::Node* node = astNode->asFunctionDefinition.arguments;
+				while (node->astNodeType == ast::NodeType::COMPOUND || node->astNodeType == ast::NodeType::VARIABLE_DECLARATION)
 				{
 					localVariables[astNode->asFunctionDefinition.identifier->asIdentifier.identifier] = i;
 					writeLine("\taddi $sp, $sp, -4");
 					writeLine("\tsw $" + std::to_string(Register::A0 + i) + ", -" + std::to_string(i) + "($fp)");
 					i += INSTRUCTION_SIZE;
+
+					if (node->astNodeType == ast::NodeType::COMPOUND)
+					{
+						node = node->asCompound.second;
+					}
+					else
+					{
+						break;
+					}
 				}
 
 				codeGeneration(astNode->asFunctionDefinition.body);
@@ -524,19 +391,31 @@ namespace kasm
 				localVariables.clear();
 			}
 			break;
-		case ASTNodeType::FUNCTION_CALL:
+		case ast::NodeType::FUNCTION_CALL:
 			{
 				std::uint32_t argReg = Register::A0;
-				for (ASTNode* node : astNode->asFunctionCall.arguments->asCompoundNode.body)
+				ast::Node* node = astNode->asFunctionCall.arguments;
+				while (node->astNodeType != ast::NodeType::EMPTY)
 				{
-					codeGeneration(node);
+					codeGeneration(node->astNodeType == ast::NodeType::COMPOUND ? node->asCompound.first : node);
+
 					writeLine("\tcopy $" + std::to_string(argReg) + ", $t0");
 					argReg++;
+
+					if (node->astNodeType == ast::NodeType::COMPOUND)
+					{
+						node = node->asCompound.second;
+					}
+					else
+					{
+						break;
+					}
 				}
+
 				writeLine("\tcall " + astNode->asFunctionCall.identifier->asIdentifier.identifier);
 			}
 			break;
-		case ASTNodeType::IF_THEN_ELSE:
+		case ast::NodeType::IF_THEN_ELSE:
 			{
 				std::uint32_t endLabel = uid++;
 				std::uint32_t elseLabel = uid++;
@@ -549,7 +428,7 @@ namespace kasm
 				writeLine("_" + std::to_string(endLabel) + ":");
 			}
 			break;
-		case ASTNodeType::IF_THEN:
+		case ast::NodeType::IF_THEN:
 			{
 				std::uint32_t endLabel = uid++;
 				codeGeneration(astNode->asIfThen.condition);
@@ -558,7 +437,7 @@ namespace kasm
 				writeLine("_" + std::to_string(endLabel) + ":");
 			}
 			break;
-		case ASTNodeType::WHILE:
+		case ast::NodeType::WHILE:
 			{
 				std::uint32_t topLabel = uid++;
 				std::uint32_t bottomLabel = uid++;
@@ -570,7 +449,7 @@ namespace kasm
 				writeLine("\tbne $t0, $zero, _" + std::to_string(topLabel));
 			}
 			break;
-		case ASTNodeType::DO_WHILE:
+		case ast::NodeType::DO_WHILE:
 			{
 				std::uint32_t topLabel = uid++;
 				writeLine("_" + std::to_string(topLabel) + ":");
@@ -579,7 +458,7 @@ namespace kasm
 				writeLine("\tbne $t0, $zero, _" + std::to_string(topLabel));
 			}
 			break;
-		case ASTNodeType::FOR:
+		case ast::NodeType::FOR:
 			{
 				std::uint32_t topLabel = uid++;
 				std::uint32_t bottomLabel = uid++;
@@ -596,10 +475,10 @@ namespace kasm
 				writeLine("_" + std::to_string(endLabel) + ":");
 			}
 			break;
-		case ASTNodeType::BINARY_OPERATOR:
+		case ast::NodeType::BINARY_OPERATOR:
 			switch (astNode->asBinaryOperator.op)
 			{
-			case BinaryOperator::ADD:
+			case ast::BinaryOperator::ADD:
 				codeGeneration(astNode->asBinaryOperator.lhs);
 				writeLine("\tsw $t0, 0($gp)");
 				writeLine("\taddi $gp, $gp, 4");
@@ -608,11 +487,11 @@ namespace kasm
 				writeLine("\tlw $t1, 0($gp)");
 				writeLine("\tadd $t0, $t0, $t1");
 				break;
-			case BinaryOperator::ASSIGNMENT:
+			case ast::BinaryOperator::ASSIGNMENT:
 				codeGeneration(astNode->asBinaryOperator.rhs);
 				writeLine("\tsb $t0, " + astNode->asBinaryOperator.lhs->asIdentifier.identifier);
 				break;
-			case BinaryOperator::EQUAL:
+			case ast::BinaryOperator::EQUAL:
 				codeGeneration(astNode->asBinaryOperator.lhs);
 				writeLine("\tsw $t0, 0($gp)");
 				writeLine("\taddi $gp, $gp, 4");
@@ -621,7 +500,7 @@ namespace kasm
 				writeLine("\tlw $t1, 0($gp)");
 				writeLine("\tsub $t0, $t0, $t1");
 				break;
-			case BinaryOperator::NOT_EQUAL:
+			case ast::BinaryOperator::NOT_EQUAL:
 				codeGeneration(astNode->asBinaryOperator.lhs);
 				writeLine("\tsw $t0, 0($gp)");
 				writeLine("\taddi $gp, $gp, 4");
@@ -631,7 +510,7 @@ namespace kasm
 				writeLine("\tsub $t0, $t0, $t1");
 				writeLine("\tnot $t0, $t0");
 				break;
-			case BinaryOperator::LESS_THAN:
+			case ast::BinaryOperator::LESS_THAN:
 				codeGeneration(astNode->asBinaryOperator.lhs);
 				writeLine("\tsw $t0, 0($gp)");
 				writeLine("\taddi $gp, $gp, 4");
@@ -640,7 +519,7 @@ namespace kasm
 				writeLine("\tlw $t1, 0($gp)");
 				writeLine("\tslt $t0, $t0, $t1");
 				break;
-			case BinaryOperator::LESS_THAN_OR_EQUAL:
+			case ast::BinaryOperator::LESS_THAN_OR_EQUAL:
 				codeGeneration(astNode->asBinaryOperator.lhs);
 				writeLine("\tsw $t0, 0($gp)");
 				writeLine("\taddi $gp, $gp, 4");
@@ -651,7 +530,7 @@ namespace kasm
 				writeLine("\tsub $t0, $t0, $t1");
 				writeLine("\tor $t0, $t0, $t2");
 				break;
-			case BinaryOperator::GREATER_THAN:
+			case ast::BinaryOperator::GREATER_THAN:
 				codeGeneration(astNode->asBinaryOperator.lhs);
 				writeLine("\tsw $t0, 0($gp)");
 				writeLine("\taddi $gp, $gp, 4");
@@ -663,7 +542,7 @@ namespace kasm
 				writeLine("\tor $t0, $t0, $t2");
 				writeLine("\tnot $t0, $t0");
 				break;
-			case BinaryOperator::GREATER_THAN_OR_EQUAL:
+			case ast::BinaryOperator::GREATER_THAN_OR_EQUAL:
 				codeGeneration(astNode->asBinaryOperator.lhs);
 				writeLine("\tsw $t0, 0($gp)");
 				writeLine("\taddi $gp, $gp, 4");
@@ -677,18 +556,18 @@ namespace kasm
 				break;
 			}
 			break;
-		case ASTNodeType::UNARY_OPERATOR:
+		case ast::NodeType::UNARY_OPERATOR:
 			switch (astNode->asUnaryOperator.op)
 			{
-			case UnaryOperator::NEGATE:
+			case ast::UnaryOperator::NEGATE:
 				codeGeneration(astNode->asUnaryOperator.rhs);
 				writeLine("sub $t0, $zero, $t0");
 				break;
-			case UnaryOperator::INDIRECTION:
+			case ast::UnaryOperator::INDIRECTION:
 				codeGeneration(astNode->asUnaryOperator.rhs);
 				writeLine("lw $t0, $t0");
 				break;
-			case UnaryOperator::ADDRESS_OF:
+			case ast::UnaryOperator::ADDRESS_OF:
 				if (localVariables.count(astNode->asUnaryOperator.rhs->asIdentifier.identifier))
 				{
 					writeLine("addi $t0, $fp, -" + std::to_string(localVariables[astNode->asUnaryOperator.rhs->asIdentifier.identifier]));
@@ -698,7 +577,7 @@ namespace kasm
 					writeLine("la $t0, " + astNode->asUnaryOperator.rhs->asIdentifier.identifier);
 				}
 				break;
-			case UnaryOperator::LOGICAL_NOT:
+			case ast::UnaryOperator::LOGICAL_NOT:
 				codeGeneration(astNode->asUnaryOperator.rhs);
 				writeLine("seq $t0, $t0, $zero");
 				break;
@@ -706,12 +585,12 @@ namespace kasm
 				break;
 			}
 			break;
-		case ASTNodeType::VARIABLE_DECLARATION:
+		case ast::NodeType::VARIABLE_DECLARATION:
 			writeLine(".data");
 			writeLine(astNode->asVariableDeclaration.identifier->asIdentifier.identifier + ":");
 			switch (astNode->asVariableDeclaration.type->asType.type)
 			{
-			case Type::U8:
+			case ast::Type::U8:
 				writeLine("\t.space 1");
 				break;
 			default:
@@ -719,7 +598,7 @@ namespace kasm
 			}
 			writeLine(".text");
 			break;
-		case ASTNodeType::IDENTIFIER:
+		case ast::NodeType::IDENTIFIER:
 			if (localVariables.count(astNode->asIdentifier.identifier))
 			{
 				writeLine("\tlw $t0, -" + std::to_string(localVariables[astNode->asIdentifier.identifier]) + "($fp)");
@@ -730,7 +609,7 @@ namespace kasm
 			}
 			break;
 		default:
-			throw std::exception("Illegal ASTNodeType");
+			throw std::exception("Illegal ast::NodeType");
 			break;
 		}
 	}

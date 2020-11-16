@@ -544,7 +544,7 @@ const static std::unordered_map<char, char> ESCAPE_SEQUENCES = {
 	{ '\"', '\"' },
 };
 
-std::string lexStringLiteral(bool resolve = true)
+static std::string lexStringLiteral(bool resolve = true)
 {
 	std::string str;
 
@@ -574,7 +574,7 @@ std::string lexStringLiteral(bool resolve = true)
 	return str;
 }
 
-std::string lineAsString()
+static std::string lineAsString()
 {
 	std::string str;
 	char c;
@@ -600,7 +600,7 @@ std::string lineAsString()
 	return str;
 }
 
-std::string blockAsString()
+static std::string blockAsString()
 {
 	std::string str;
 	
@@ -623,7 +623,7 @@ std::string blockAsString()
 	return str.substr(0, str.length() - 4);
 }
 
-std::string getString(std::streampos start, std::streampos end)
+static std::string getString(std::streampos start, std::streampos end)
 {
 	std::string buffer;
 	buffer.resize(end - start);
@@ -632,7 +632,7 @@ std::string getString(std::streampos start, std::streampos end)
 	return buffer;
 }
 
-char getChar(std::streampos start, std::streampos end)
+static char getChar(std::streampos start, std::streampos end)
 {
 	in.seekg(start);
 	char c;
@@ -644,7 +644,7 @@ char getChar(std::streampos start, std::streampos end)
 #define GET_STRING() getString(s, e)
 #define GET_CHAR() getChar(s, e)
 
-std::vector<std::string> argumentList()
+static std::vector<std::string> argumentList()
 {
 	std::string argument;
 	std::vector<std::string> arguments;
