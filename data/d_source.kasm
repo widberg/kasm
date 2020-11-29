@@ -1,118 +1,336 @@
 	.text
 _00000000:
-     main: ori $v0, $zero, 0x0006
-_00000004: lui $a0, 0x1001
-_00000008: ori $a0, $a0, 0x0000
-_0000000c: sys 
-_00000010:
-      ask: ori $v0, $zero, 0x0006
-_00000014: lui $a0, 0x1001
-_00000018: ori $a0, $a0, 0x0006
-_0000001c: sys 
-_00000020: ori $v0, $zero, 0x0003
-_00000024: sys 
-_00000028: ori $at, $zero, 0x006e
-_0000002c: beq $a0, $at, skip
-_00000030: ori $at, $zero, 0x004e
-_00000034: beq $a0, $at, skip
-_00000038: ori $at, $zero, 0x0079
-_0000003c: beq $a0, $at, yes
-_00000040: ori $at, $zero, 0x0059
-_00000044: beq $a0, $at, yes
-_00000048: j ask
-_0000004c:
-      yes: ori $v0, $zero, 0x0006
-_00000050: lui $a0, 0x1001
-_00000054: ori $a0, $a0, 0x0030
-_00000058: sys 
-_0000005c: ori $v0, $zero, 0x0005
-_00000060: lui $a0, 0x1001
-_00000064: ori $a0, $a0, 0x006d
-_00000068: ori $a1, $zero, 0x0020
-_0000006c: sys 
-_00000070: ori $v0, $zero, 0x0006
-_00000074: lui $a0, 0x1001
-_00000078: ori $a0, $a0, 0x006d
-_0000007c: sys 
-_00000080: ori $v0, $zero, 0x0006
-_00000084: lui $a0, 0x1001
-_00000088: ori $a0, $a0, 0x0042
-_0000008c: sys 
-_00000090: j ask
-_00000094:
-     skip: ori $v0, $zero, 0x0006
-_00000098: lui $a0, 0x1001
-_0000009c: ori $a0, $a0, 0x0044
-_000000a0: sys 
-_000000a4: ori $v0, $zero, 0x0000
-_000000a8: jal func
-_000000ac: lw $a0, ret
-_000000b0: ori $t0, $zero, 0x0001
-_000000b4: add $a0, $a0, $t0
-_000000b8: sys 
-_000000bc:
-     func: ori $t0, $zero, 0x0002
-_000000c0: sw $t0, ret
-_000000c4: jr $ra
+    entry: or $fp, $sp, $zero
+_00000004: lui $t0, 0x1001
+_00000008: ori $t0, $t0, 0x0000
+_0000000c: sw $t0, 0x0($gp)
+_00000010: addi $gp, $gp, 0x0004
+_00000014: lui $t0, 0x1001
+_00000018: ori $t0, $t0, 0x0004
+_0000001c: or $a0, $t0, $zero
+_00000020: ori $t0, $zero, 0x0001
+_00000024: or $a1, $t0, $zero
+_00000028: jal fopen
+_0000002c: addi $gp, $gp, 0xfffc
+_00000030: lw $t1, 0x0($gp)
+_00000034: sw $t0, 0x0($t1)
+_00000038: lui $t0, 0x1001
+_0000003c: ori $t0, $t0, 0x000d
+_00000040: sw $t0, 0x0($gp)
+_00000044: addi $gp, $gp, 0x0004
+_00000048: ori $t0, $zero, 0x0002
+_0000004c: addi $gp, $gp, 0xfffc
+_00000050: lw $t1, 0x0($gp)
+_00000054: sw $t0, 0x0($t1)
+_00000058: lui $t0, 0x1001
+_0000005c: ori $t0, $t0, 0x0011
+_00000060: sw $t0, 0x0($gp)
+_00000064: addi $gp, $gp, 0x0004
+_00000068: ori $t0, $zero, 0x0001
+_0000006c: addi $gp, $gp, 0xfffc
+_00000070: lw $t1, 0x0($gp)
+_00000074: sw $t0, 0x0($t1)
+_00000078: lui $t0, 0x1001
+_0000007c: ori $t0, $t0, 0x0011
+_00000080: lw $t0, 0x0($t0)
+_00000084: sw $t0, 0x0($gp)
+_00000088: addi $gp, $gp, 0x0004
+_0000008c: ori $t0, $zero, 0x0064
+_00000090: addi $gp, $gp, 0xfffc
+_00000094: lw $t1, 0x0($gp)
+_00000098: slt $t2, $t1, 0x44cc
+_0000009c: seq $t0, $t0, 0x4ccc
+_000000a0: or $t0, $t0, $t2
+_000000a4: beq $t0, $zero, _3
+_000000a8:
+       _1: lui $t0, 0x1001
+_000000ac: ori $t0, $t0, 0x0011
+_000000b0: lw $t0, 0x0($t0)
+_000000b4: sw $t0, 0x0($gp)
+_000000b8: addi $gp, $gp, 0x0004
+_000000bc: ori $t0, $zero, 0x0003
+_000000c0: addi $gp, $gp, 0xfffc
+_000000c4: lw $t1, 0x0($gp)
+_000000c8: div $t1, $t0
+_000000cc: mfhi $t0
+_000000d0: sw $t0, 0x0($gp)
+_000000d4: addi $gp, $gp, 0x0004
+_000000d8: ori $t0, $zero, 0x0000
+_000000dc: addi $gp, $gp, 0xfffc
+_000000e0: lw $t1, 0x0($gp)
+_000000e4: seq $t0, $t1, 0x44cc
+_000000e8: sw $t0, 0x0($gp)
+_000000ec: addi $gp, $gp, 0x0004
+_000000f0: lui $t0, 0x1001
+_000000f4: ori $t0, $t0, 0x0011
+_000000f8: lw $t0, 0x0($t0)
+_000000fc: sw $t0, 0x0($gp)
+_00000100: addi $gp, $gp, 0x0004
+_00000104: ori $t0, $zero, 0x0005
+_00000108: addi $gp, $gp, 0xfffc
+_0000010c: lw $t1, 0x0($gp)
+_00000110: div $t1, $t0
+_00000114: mfhi $t0
+_00000118: sw $t0, 0x0($gp)
+_0000011c: addi $gp, $gp, 0x0004
+_00000120: ori $t0, $zero, 0x0000
+_00000124: addi $gp, $gp, 0xfffc
+_00000128: lw $t1, 0x0($gp)
+_0000012c: seq $t0, $t1, 0x44cc
+_00000130: addi $gp, $gp, 0xfffc
+_00000134: lw $t1, 0x0($gp)
+_00000138: sne $t0, $t0, 0x04cc
+_0000013c: sne $t1, $t1, 0x04cc
+_00000140: and $t0, $t1, $t0
+_00000144: beq $t0, $zero, _5
+_00000148: lui $t0, 0x1001
+_0000014c: ori $t0, $t0, 0x0015
+_00000150: or $a0, $t0, $zero
+_00000154: jal print
+_00000158: beq $zero, $zero, _2
+_0000015c:
+       _5: lui $t0, 0x1001
+_00000160: ori $t0, $t0, 0x0011
+_00000164: lw $t0, 0x0($t0)
+_00000168: sw $t0, 0x0($gp)
+_0000016c: addi $gp, $gp, 0x0004
+_00000170: ori $t0, $zero, 0x0003
+_00000174: addi $gp, $gp, 0xfffc
+_00000178: lw $t1, 0x0($gp)
+_0000017c: div $t1, $t0
+_00000180: mfhi $t0
+_00000184: sw $t0, 0x0($gp)
+_00000188: addi $gp, $gp, 0x0004
+_0000018c: ori $t0, $zero, 0x0000
+_00000190: addi $gp, $gp, 0xfffc
+_00000194: lw $t1, 0x0($gp)
+_00000198: seq $t0, $t1, 0x44cc
+_0000019c: beq $t0, $zero, _8
+_000001a0: lui $t0, 0x1001
+_000001a4: ori $t0, $t0, 0x001f
+_000001a8: or $a0, $t0, $zero
+_000001ac: jal print
+_000001b0: beq $zero, $zero, _2
+_000001b4:
+       _8: lui $t0, 0x1001
+_000001b8: ori $t0, $t0, 0x0011
+_000001bc: lw $t0, 0x0($t0)
+_000001c0: sw $t0, 0x0($gp)
+_000001c4: addi $gp, $gp, 0x0004
+_000001c8: ori $t0, $zero, 0x0005
+_000001cc: addi $gp, $gp, 0xfffc
+_000001d0: lw $t1, 0x0($gp)
+_000001d4: div $t1, $t0
+_000001d8: mfhi $t0
+_000001dc: sw $t0, 0x0($gp)
+_000001e0: addi $gp, $gp, 0x0004
+_000001e4: ori $t0, $zero, 0x0000
+_000001e8: addi $gp, $gp, 0xfffc
+_000001ec: lw $t1, 0x0($gp)
+_000001f0: seq $t0, $t1, 0x44cc
+_000001f4: beq $t0, $zero, _11
+_000001f8: lui $t0, 0x1001
+_000001fc: ori $t0, $t0, 0x0025
+_00000200: or $a0, $t0, $zero
+_00000204: jal print
+_00000208: beq $zero, $zero, _2
+_0000020c:
+      _11: lui $t0, 0x1001
+_00000210: ori $t0, $t0, 0x0011
+_00000214: lw $t0, 0x0($t0)
+_00000218: or $a0, $t0, $zero
+_0000021c: jal printi
+_00000220: lui $t0, 0x1001
+_00000224: ori $t0, $t0, 0x002b
+_00000228: or $a0, $t0, $zero
+_0000022c: jal print
+_00000230:
+       _2: lui $t0, 0x1001
+_00000234: ori $t0, $t0, 0x0011
+_00000238: sw $t0, 0x0($gp)
+_0000023c: addi $gp, $gp, 0x0004
+_00000240: lui $t0, 0x1001
+_00000244: ori $t0, $t0, 0x0011
+_00000248: lw $t0, 0x0($t0)
+_0000024c: sw $t0, 0x0($gp)
+_00000250: addi $gp, $gp, 0x0004
+_00000254: ori $t0, $zero, 0x0001
+_00000258: addi $gp, $gp, 0xfffc
+_0000025c: lw $t1, 0x0($gp)
+_00000260: add $t0, $t1, $t0
+_00000264: addi $gp, $gp, 0xfffc
+_00000268: lw $t1, 0x0($gp)
+_0000026c: sw $t0, 0x0($t1)
+_00000270: lui $t0, 0x1001
+_00000274: ori $t0, $t0, 0x0011
+_00000278: lw $t0, 0x0($t0)
+_0000027c: sw $t0, 0x0($gp)
+_00000280: addi $gp, $gp, 0x0004
+_00000284: ori $t0, $zero, 0x0064
+_00000288: addi $gp, $gp, 0xfffc
+_0000028c: lw $t1, 0x0($gp)
+_00000290: slt $t2, $t1, 0x44cc
+_00000294: seq $t0, $t0, 0x4ccc
+_00000298: or $t0, $t0, $t2
+_0000029c: bne $t0, $zero, _1
+_000002a0:
+       _3: lui $t0, 0x1001
+_000002a4: ori $t0, $t0, 0x0000
+_000002a8: lw $t0, 0x0($t0)
+_000002ac: or $a0, $t0, $zero
+_000002b0: jal fclose
+_000002b4: ori $t0, $zero, 0x000a
+_000002b8: sw $t0, 0x0($gp)
+_000002bc: addi $gp, $gp, 0x0004
+_000002c0: lui $t0, 0x1001
+_000002c4: ori $t0, $t0, 0x000d
+_000002c8: lw $t0, 0x0($t0)
+_000002cc: or $a0, $t0, $zero
+_000002d0: jal test
+_000002d4: addi $gp, $gp, 0xfffc
+_000002d8: lw $t1, 0x0($gp)
+_000002dc: add $t0, $t1, $t0
+_000002e0: or $a0, $t0, $zero
+_000002e4: ori $v0, $zero, 0x0000
+_000002e8: sys 
+_000002ec: or $sp, $fp, $zero
+_000002f0: lw $fp, 0x0($sp)
+_000002f4: addi $sp, $sp, 0x0004
+_000002f8: lw $ra, 0x0($sp)
+_000002fc: addi $sp, $sp, 0x0004
+_00000300: jr $ra
+_00000304:
+     test: addi $sp, $sp, 0xfffc
+_00000308: sw $ra, 0x0($sp)
+_0000030c: addi $sp, $sp, 0xfffc
+_00000310: sw $fp, 0x0($sp)
+_00000314: or $fp, $sp, $zero
+_00000318: addi $sp, $sp, 0xfffc
+_0000031c: sw $t0, _fffffffc($fp)
+_00000320: lui $t0, 0x1001
+_00000324: ori $t0, $t0, 0x000d
+_00000328: lw $t0, 0x0($t0)
+_0000032c: sw $t0, 0x0($gp)
+_00000330: addi $gp, $gp, 0x0004
+_00000334: ori $t0, $zero, 0x0005
+_00000338: addi $gp, $gp, 0xfffc
+_0000033c: lw $t1, 0x0($gp)
+_00000340: add $t0, $t1, $t0
+_00000344: or $sp, $fp, $zero
+_00000348: lw $fp, 0x0($sp)
+_0000034c: addi $sp, $sp, 0x0004
+_00000350: lw $ra, 0x0($sp)
+_00000354: addi $sp, $sp, 0x0004
+_00000358: jr $ra
+_0000035c: or $sp, $fp, $zero
+_00000360: lw $fp, 0x0($sp)
+_00000364: addi $sp, $sp, 0x0004
+_00000368: lw $ra, 0x0($sp)
+_0000036c: addi $sp, $sp, 0x0004
+_00000370: jr $ra
+_00000374:
+   printi: addi $sp, $sp, 0xfffc
+_00000378: sw $ra, 0x0($sp)
+_0000037c: addi $sp, $sp, 0xfffc
+_00000380: sw $fp, 0x0($sp)
+_00000384: or $fp, $sp, $zero
+_00000388: addi $sp, $sp, 0xfffc
+_0000038c: sw $t0, _fffffffc($fp)
+_00000390: ori $v0, $zero, 0x0002
+_00000394: sys 
+_00000398: or $sp, $fp, $zero
+_0000039c: lw $fp, 0x0($sp)
+_000003a0: addi $sp, $sp, 0x0004
+_000003a4: lw $ra, 0x0($sp)
+_000003a8: addi $sp, $sp, 0x0004
+_000003ac: jr $ra
+_000003b0:
+    print: addi $sp, $sp, 0xfffc
+_000003b4: sw $ra, 0x0($sp)
+_000003b8: addi $sp, $sp, 0xfffc
+_000003bc: sw $fp, 0x0($sp)
+_000003c0: or $fp, $sp, $zero
+_000003c4: addi $sp, $sp, 0xfffc
+_000003c8: sw $t0, _fffffffc($fp)
+_000003cc: ori $v0, $zero, 0x0006
+_000003d0: sys 
+_000003d4: or $sp, $fp, $zero
+_000003d8: lw $fp, 0x0($sp)
+_000003dc: addi $sp, $sp, 0x0004
+_000003e0: lw $ra, 0x0($sp)
+_000003e4: addi $sp, $sp, 0x0004
+_000003e8: jr $ra
+_000003ec:
+    fopen: addi $sp, $sp, 0xfffc
+_000003f0: sw $ra, 0x0($sp)
+_000003f4: addi $sp, $sp, 0xfffc
+_000003f8: sw $fp, 0x0($sp)
+_000003fc: or $fp, $sp, $zero
+_00000400: addi $sp, $sp, 0xfffc
+_00000404: sw $t0, _fffffffc($fp)
+_00000408: addi $sp, $sp, 0xfffc
+_0000040c: sw $t4, _fffffff8($fp)
+_00000410: ori $v0, $zero, 0x0009
+_00000414: sys 
+_00000418: or $t0, $v0, $zero
+_0000041c: or $sp, $fp, $zero
+_00000420: lw $fp, 0x0($sp)
+_00000424: addi $sp, $sp, 0x0004
+_00000428: lw $ra, 0x0($sp)
+_0000042c: addi $sp, $sp, 0x0004
+_00000430: jr $ra
+_00000434:
+   fclose: addi $sp, $sp, 0xfffc
+_00000438: sw $ra, 0x0($sp)
+_0000043c: addi $sp, $sp, 0xfffc
+_00000440: sw $fp, 0x0($sp)
+_00000444: or $fp, $sp, $zero
+_00000448: addi $sp, $sp, 0xfffc
+_0000044c: sw $t0, _fffffffc($fp)
+_00000450: ori $v0, $zero, 0x000a
+_00000454: sys 
+_00000458: or $sp, $fp, $zero
+_0000045c: lw $fp, 0x0($sp)
+_00000460: addi $sp, $sp, 0x0004
+_00000464: lw $ra, 0x0($sp)
+_00000468: addi $sp, $sp, 0x0004
+_0000046c: jr $ra
 	.data
 _10010000:
-string_address0: .word 0x68757262
-_10010004: .byte 0x0a
-_10010005: .byte 0x00
-_10010006:
-string_address1: .byte 0x57
-_10010007: .byte 0x6f
-_10010008: .word 0x20646c75
-_1001000c: .word 0x20756f79
-_10010010: .word 0x656b696c
-_10010014: .word 0x206f7420
-_10010018: .word 0x65707974
-_1001001c: .word 0x6d6f7320
-_10010020: .word 0x69687465
-_10010024: .word 0x203f676e
-_10010028: .word 0x6e2f7928
-_1001002c: .word 0x00203a29
-_10010030:
-string_address2: .word 0x65707954
-_10010034: .word 0x6d6f7320
-_10010038: .word 0x69687465
-_1001003c: .word 0x3e0a676e
-_10010040: .byte 0x20
-_10010041: .byte 0x00
-_10010042:
-string_address3: .byte 0x0a
-_10010043: .byte 0x00
-_10010044:
-string_address4: .word 0x6e616854
-_10010048: .word 0x6f79206b
-_1001004c: .word 0x6f662075
-_10010050: .word 0x75722072
-_10010054: .word 0x6e696e6e
-_10010058: .word 0x68742067
-_1001005c: .word 0x70207369
-_10010060: .word 0x72676f72
-_10010064: .word 0x0a2e6d61
-_10010068: .byte 0x00
-_10010069:
-      ret: .byte 0x00
-_1001006a: .byte 0x00
-_1001006b: .byte 0x00
-_1001006c: .byte 0x00
-_1001006d:
-      msg: .byte 0x00
-_1001006e: .byte 0x00
-_1001006f: .byte 0x00
-_10010070: .word 0x00000000
-_10010074: .word 0x00000000
-_10010078: .word 0x00000000
-_1001007c: .word 0x00000000
-_10010080: .word 0x00000000
-_10010084: .word 0x00000000
-_10010088: .word 0x00000000
-_1001008c: .word 0x00000000
-_10010090:
-some_trash: .word 0x00000004
-_10010094: .word 0x00000201
-_10010098: .word 0x00000003
-_1001009c: .word 0x00000005
-_100100a0: .word 0x00000006
+     file: .word 0x00000000
+_10010004:
+       _0: .word 0x72756f73
+_10010008: .word 0x6b2e6563
+_1001000c: .byte 0x00
+_1001000d:
+        x: .byte 0x00
+_1001000e: .byte 0x00
+_1001000f: .byte 0x00
+_10010010: .byte 0x00
+_10010011:
+        i: .byte 0x00
+_10010012: .byte 0x00
+_10010013: .byte 0x00
+_10010014: .byte 0x00
+_10010015:
+       _6: .byte 0x66
+_10010016: .byte 0x69
+_10010017: .byte 0x7a
+_10010018: .word 0x7a75627a
+_1001001c: .byte 0x7a
+_1001001d: .byte 0x0a
+_1001001e: .byte 0x00
+_1001001f:
+       _9: .byte 0x66
+_10010020: .word 0x0a7a7a69
+_10010024: .byte 0x00
+_10010025:
+      _12: .byte 0x62
+_10010026: .byte 0x75
+_10010027: .byte 0x7a
+_10010028: .byte 0x7a
+_10010029: .byte 0x0a
+_1001002a: .byte 0x00
+_1001002b:
+      _13: .byte 0x0a
+_1001002c: .word 0x00000000

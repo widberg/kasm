@@ -14,7 +14,7 @@ namespace kasm
 		std::ifstream programFile(programPath, std::ios::binary);
 		std::ofstream asmFile(asmPath);
 
-		static const char* instructionNames[] = { "add", "addi", "addiu", "addu", "and", "andi", "beq", "bgez", "bgezal", "bgtz", "blez", "bltz", "bltzal", "bne", "div", "divu", "j", "jal", "jr", "lb", "lui", "lw", "mfhi", "mflo", "mult", "multu", "or", "ori", "sb", "sll", "sllv", "slt", "slti", "sltiu", "sltu", "sra", "srl", "srlv", "sub", "subu", "sw", "sys", "xor", "xori", "jalr", "nor", ".text", ".data" };
+		static const char* instructionNames[] = { "add", "addi", "addiu", "addu", "and", "andi", "beq", "bgez", "bgezal", "bgtz", "blez", "bltz", "bltzal", "bne", "div", "divu", "j", "jal", "jr", "lb", "lui", "lw", "mfhi", "mflo", "mult", "multu", "or", "ori", "sb", "sll", "sllv", "slt", "slti", "sltiu", "sltu", "sne", "seq", "sra", "srl", "srlv", "sub", "subu", "sw", "sys", "xor", "xori", "jalr", "nor", ".text", ".data" };
 		static const char* registerNames[] = { "$zero", "$at", "$v0", "v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra" };
 
 		enum InstrucionElement
@@ -74,6 +74,8 @@ namespace kasm
 			{ SLTI, RRI },
 			{ SLTIU, RRI },
 			{ SLTU, RRI },
+			{ SNE, RRI },
+			{ SEQ, RRI },
 			{ SRA, RRI },
 			{ SRL, RRI },
 			{ SRLV, RRR },
@@ -152,10 +154,10 @@ namespace kasm
 			}
 			if (instructionFormat & IDA)
 			{
-				std::uint32_t absoluteAddress = d.directAddressOffset + DATA_SEGMENT_OFFSET + pc;
+				std::uint32_t absoluteAddress = d.directAddressOffset + pc;
 				if (symbolTable.count(absoluteAddress))
 				{
-					asmFile << getLabelFromAddress(absoluteAddress);
+					asmFile << getLabelFromAddress(absoluteAddress, false, true);
 				}
 				else
 				{
@@ -223,16 +225,20 @@ namespace kasm
 		}
 	}
 
-	std::string Disassembler::getLabelFromAddress(std::uint32_t location, bool padded)
+	std::string Disassembler::getLabelFromAddress(std::uint32_t location, bool padded, bool dataOnly)
 	{
 		std::stringstream ss;
-		if (symbolTable.count(location))
+		if (symbolTable.count(location) && (!dataOnly || location >= DATA_SEGMENT_OFFSET && location < STACK_OFFSET))
 		{
 			if (padded)
 			{
 				ss << std::setw(9) << std::setfill(' ');
 			}
 			ss << symbolTable.at(location);
+		}
+		else if (dataOnly && location < DATA_SEGMENT_OFFSET)
+		{
+			ss << "0x"<< std::hex << location;
 		}
 		else
 		{

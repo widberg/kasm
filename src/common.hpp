@@ -110,6 +110,8 @@ namespace kasm
         XORI,
         JALR,
         NOR,
+
+        ERR = 0x111111 // reserved invalid opcode
     };
 
     enum Register : std::uint32_t

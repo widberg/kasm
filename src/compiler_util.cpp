@@ -37,8 +37,6 @@ namespace kasm
 		std::cout << line << std::endl;
 	}
 
-
-
 	std::uint32_t Compiler::getSizeOfType(ast::Type type)
 	{
 		switch (type)
@@ -356,6 +354,7 @@ namespace kasm
 	{
 		static std::unordered_map<std::string, std::uint32_t> localVariables;
 		static std::uint32_t uid = 0;
+		static bool lval = false;
 
 		switch (astNode->astNodeType)
 		{
@@ -526,8 +525,15 @@ namespace kasm
 				writeLine("\trem $t0, $t1, $t0");
 				break;
 			case ast::BinaryOperator::ASSIGNMENT:
+				lval = true;
+				codeGeneration(astNode->asBinaryOperator.lhs);
+				lval = false;
+				writeLine("\tsw $t0, 0($gp)");
+				writeLine("\taddi $gp, $gp, 4");
 				codeGeneration(astNode->asBinaryOperator.rhs);
-				writeLine("\tsb $t0, " + astNode->asBinaryOperator.lhs->asIdentifier.identifier);
+				writeLine("\taddi $gp, $gp, -4");
+				writeLine("\tlw $t1, 0($gp)");
+				writeLine("\tsw $t0, ($t1)");
 				break;
 			case ast::BinaryOperator::LOGICAL_AND:
 				codeGeneration(astNode->asBinaryOperator.lhs);
@@ -586,9 +592,9 @@ namespace kasm
 				writeLine("\taddi $gp, $gp, -4");
 				writeLine("\tlw $t1, 0($gp)");
 				writeLine("\tslt $t2, $t0, $t1");
-				writeLine("\tsub $t0, $t0, $t1");
+				writeLine("\tseq $t0, $t0, $t1");
 				writeLine("\tor $t0, $t0, $t2");
-				writeLine("\tnot $t0, $t0");
+				writeLine("\txori $t0, $t0, 1");
 				break;
 			case ast::BinaryOperator::GREATER_THAN_OR_EQUAL:
 				codeGeneration(astNode->asBinaryOperator.lhs);
@@ -598,7 +604,7 @@ namespace kasm
 				writeLine("\taddi $gp, $gp, -4");
 				writeLine("\tlw $t1, 0($gp)");
 				writeLine("\tslt $t0, $t0, $t1");
-				writeLine("\tnot $t0, $t0");
+				writeLine("\txori $t0, $t0, 1");
 				break;
 			default:
 				break;
@@ -613,7 +619,7 @@ namespace kasm
 				break;
 			case ast::UnaryOperator::INDIRECTION:
 				codeGeneration(astNode->asUnaryOperator.rhs);
-				writeLine("lw $t0, $t0");
+				writeLine("lw $t0, ($t0)");
 				break;
 			case ast::UnaryOperator::ADDRESS_OF:
 				if (localVariables.count(astNode->asUnaryOperator.rhs->asIdentifier.identifier))
@@ -636,24 +642,36 @@ namespace kasm
 		case ast::NodeType::VARIABLE_DECLARATION:
 			writeLine(".data");
 			writeLine(astNode->asVariableDeclaration.identifier->asIdentifier.identifier + ":");
-			switch (astNode->asVariableDeclaration.type->asType.type)
-			{
-			case ast::Type::U8:
-				writeLine("\t.space 1");
-				break;
-			default:
-				break;
-			}
+			writeLine("\t.space " + std::to_string(getSizeOfType(astNode->asVariableDeclaration.type->asType.type)));
 			writeLine(".text");
+			if (lval)
+			{
+				writeLine("la $t0, " + astNode->asVariableDeclaration.identifier->asIdentifier.identifier);
+			}
 			break;
 		case ast::NodeType::IDENTIFIER:
-			if (localVariables.count(astNode->asIdentifier.identifier))
+			if (lval)
 			{
-				writeLine("\tlw $t0, -" + std::to_string(localVariables[astNode->asIdentifier.identifier]) + "($fp)");
+				if (localVariables.count(astNode->asIdentifier.identifier))
+				{
+					writeLine("\tadd $t0, -" + std::to_string(localVariables[astNode->asIdentifier.identifier]) + ", $fp");
+				}
+				else
+				{
+					writeLine("\tla $t0, " + astNode->asIdentifier.identifier);
+				}
 			}
 			else
 			{
-				writeLine("\tlb $t0, " + astNode->asIdentifier.identifier);
+				if (localVariables.count(astNode->asIdentifier.identifier))
+				{
+					writeLine("\tlw $t0, -" + std::to_string(localVariables[astNode->asIdentifier.identifier]) + "($fp)");
+				}
+				else
+				{
+					writeLine("\tla $t0, " + astNode->asIdentifier.identifier);
+					writeLine("\tlw $t0, ($t0)");
+				}
 			}
 			break;
 		case ast::NodeType::STRING_LITERAL:

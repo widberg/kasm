@@ -45,9 +45,9 @@ namespace cyy { parser::symbol_type yylex(kasm::Compiler& compiler); }
 
 %token END_OF_FILE 0
 
-%token RETURN INCLUDE ASM WHILE IF ELSE FOR
+%token RETURN INCLUDE ASM WHILE IF ELSE FOR DO
 
-%token EQUAL LESS_THAN_OR_EQUAL LOGICAL_AND
+%token EQUAL "==" LESS_THAN_OR_EQUAL "<=" LOGICAL_AND "&&"
 
 %token<std::string> IDENTIFIER STRING
 %token<std::uint32_t> LITERAL
@@ -57,6 +57,7 @@ namespace cyy { parser::symbol_type yylex(kasm::Compiler& compiler); }
 
 %right ','
 %right '='
+%right ':'
 %right LOGICAL_AND
 %right EQUAL LESS_THAN_OR_EQUAL
 %left '+' '-'
@@ -83,6 +84,7 @@ statement
 	| IF '(' expression ')' statement ELSE statement { $$ = kasm::ast::makeIfThenElse($3, $5, $7); }
 	| WHILE '(' expression ')' statement { $$ = kasm::ast::makeWhile($3, $5); }
 	| FOR '(' expression_or_nothing ';' expression_or_nothing ';' expression_or_nothing ')' statement { $$ = kasm::ast::makeFor($3, $5, $7, $9); }
+	| DO statement WHILE '(' expression ')' ';' { $$ = kasm::ast::makeDoWhile($5, $2); }
 	;
 
 compound_statement
@@ -95,11 +97,14 @@ expression
 	| expression '%' expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::MODULUS, $1, $3); }
 	| expression '=' expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::ASSIGNMENT, $1, $3); }
 	| identifier '(' expression_or_nothing ')' { $$ = kasm::ast::makeFunctionCall($1, $3); }
+	| '(' expression ')' { $$ = $2; }
 	| expression ',' expression { $$ = kasm::ast::makeCompound($1, $3); }
 	| identifier ':' type { $$ = kasm::ast::makeVariableDeclaration($1, $3); }
-	| expression EQUAL expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::EQUAL, $1, $3); }
-	| expression LESS_THAN_OR_EQUAL expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::LESS_THAN_OR_EQUAL, $1, $3); }
-	| expression LOGICAL_AND expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::LOGICAL_AND, $1, $3); }
+	| expression "==" expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::EQUAL, $1, $3); }
+	| expression "<=" expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::LESS_THAN_OR_EQUAL, $1, $3); }
+	| expression "&&" expression { $$ = kasm::ast::makeBinaryOperator(kasm::ast::BinaryOperator::LOGICAL_AND, $1, $3); }
+	| '&' expression { $$ = kasm::ast::makeUnaryOperator(kasm::ast::UnaryOperator::ADDRESS_OF, $2); }
+	| '@' expression { $$ = kasm::ast::makeUnaryOperator(kasm::ast::UnaryOperator::INDIRECTION, $2); }
 	| literal { $$ = $1; }
 	| identifier { $$ = $1; }
 	| string_literal { $$ = $1; }
@@ -255,6 +260,7 @@ cyy::parser::symbol_type cyy::yylex(kasm::Compiler& compiler)
 		"if"                 { TOKEN(IF); }
 		"else"                 { TOKEN(ELSE); }
 		"for"                 { TOKEN(FOR); }
+		"do"                  { TOKEN(DO); }
 		
 		"=="                 { TOKEN(EQUAL); }
 		"<="                 { TOKEN(LESS_THAN_OR_EQUAL); }

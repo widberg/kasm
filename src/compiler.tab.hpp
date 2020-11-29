@@ -710,13 +710,14 @@ namespace  cyy  {
         IF = 262,
         ELSE = 263,
         FOR = 264,
-        EQUAL = 265,
-        LESS_THAN_OR_EQUAL = 266,
-        LOGICAL_AND = 267,
-        IDENTIFIER = 268,
-        STRING = 269,
-        LITERAL = 270,
-        TYPE = 271
+        DO = 265,
+        EQUAL = 266,
+        LESS_THAN_OR_EQUAL = 267,
+        LOGICAL_AND = 268,
+        IDENTIFIER = 269,
+        STRING = 270,
+        LITERAL = 271,
+        TYPE = 272
       };
     };
 
@@ -845,28 +846,28 @@ namespace  cyy  {
         // Type destructor.
 switch (yytype)
     {
-      case 33: // statement
-      case 36: // compound_statement
-      case 37: // expression
-      case 38: // expression_or_nothing
-      case 39: // function_definition
-      case 40: // type
-      case 41: // identifier
-      case 42: // literal
-      case 43: // string_literal
+      case 36: // statement
+      case 39: // compound_statement
+      case 40: // expression
+      case 41: // expression_or_nothing
+      case 42: // function_definition
+      case 43: // type
+      case 44: // identifier
+      case 45: // literal
+      case 46: // string_literal
         value.template destroy< kasm::ast::Node* > ();
         break;
 
-      case 16: // TYPE
+      case 17: // TYPE
         value.template destroy< kasm::ast::Type > ();
         break;
 
-      case 13: // IDENTIFIER
-      case 14: // STRING
+      case 14: // IDENTIFIER
+      case 15: // STRING
         value.template destroy< std::string > ();
         break;
 
-      case 15: // LITERAL
+      case 16: // LITERAL
         value.template destroy< std::uint32_t > ();
         break;
 
@@ -949,13 +950,13 @@ switch (yytype)
       symbol_type (int tok, location_type l)
         : super_type(token_type (tok), std::move (l))
       {
-        YYASSERT (tok == token::END_OF_FILE || tok == token::RETURN || tok == token::INCLUDE || tok == token::ASM || tok == token::WHILE || tok == token::IF || tok == token::ELSE || tok == token::FOR || tok == token::EQUAL || tok == token::LESS_THAN_OR_EQUAL || tok == token::LOGICAL_AND || tok == 44 || tok == 61 || tok == 43 || tok == 45 || tok == 42 || tok == 47 || tok == 37 || tok == 126 || tok == 59 || tok == 123 || tok == 125 || tok == 40 || tok == 41 || tok == 58);
+        YYASSERT (tok == token::END_OF_FILE || tok == token::RETURN || tok == token::INCLUDE || tok == token::ASM || tok == token::WHILE || tok == token::IF || tok == token::ELSE || tok == token::FOR || tok == token::DO || tok == token::EQUAL || tok == token::LESS_THAN_OR_EQUAL || tok == token::LOGICAL_AND || tok == 44 || tok == 61 || tok == 58 || tok == 43 || tok == 45 || tok == 42 || tok == 47 || tok == 37 || tok == 126 || tok == 59 || tok == 123 || tok == 125 || tok == 40 || tok == 41 || tok == 38 || tok == 64);
       }
 #else
       symbol_type (int tok, const location_type& l)
         : super_type(token_type (tok), l)
       {
-        YYASSERT (tok == token::END_OF_FILE || tok == token::RETURN || tok == token::INCLUDE || tok == token::ASM || tok == token::WHILE || tok == token::IF || tok == token::ELSE || tok == token::FOR || tok == token::EQUAL || tok == token::LESS_THAN_OR_EQUAL || tok == token::LOGICAL_AND || tok == 44 || tok == 61 || tok == 43 || tok == 45 || tok == 42 || tok == 47 || tok == 37 || tok == 126 || tok == 59 || tok == 123 || tok == 125 || tok == 40 || tok == 41 || tok == 58);
+        YYASSERT (tok == token::END_OF_FILE || tok == token::RETURN || tok == token::INCLUDE || tok == token::ASM || tok == token::WHILE || tok == token::IF || tok == token::ELSE || tok == token::FOR || tok == token::DO || tok == token::EQUAL || tok == token::LESS_THAN_OR_EQUAL || tok == token::LOGICAL_AND || tok == 44 || tok == 61 || tok == 58 || tok == 43 || tok == 45 || tok == 42 || tok == 47 || tok == 37 || tok == 126 || tok == 59 || tok == 123 || tok == 125 || tok == 40 || tok == 41 || tok == 38 || tok == 64);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1152,6 +1153,21 @@ switch (yytype)
       make_FOR (const location_type& l)
       {
         return symbol_type (token::FOR, l);
+      }
+#endif
+#if 201103L <= YY_CPLUSPLUS
+      static
+      symbol_type
+      make_DO (location_type l)
+      {
+        return symbol_type (token::DO, std::move (l));
+      }
+#else
+      static
+      symbol_type
+      make_DO (const location_type& l)
+      {
+        return symbol_type (token::DO, l);
       }
 #endif
 #if 201103L <= YY_CPLUSPLUS
@@ -1565,12 +1581,12 @@ switch (yytype)
     enum
     {
       yyeof_ = 0,
-      yylast_ = 176,     ///< Last index in yytable_.
+      yylast_ = 255,     ///< Last index in yytable_.
       yynnts_ = 13,  ///< Number of nonterminal symbols.
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
-      yyntokens_ = 31  ///< Number of tokens.
+      yyntokens_ = 34  ///< Number of tokens.
     };
 
 
@@ -1591,16 +1607,16 @@ switch (yytype)
        0,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,    23,     2,     2,
-      28,    29,    21,    19,    17,    20,     2,    22,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,    30,    25,
-       2,    18,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,    25,    32,     2,
+      30,    31,    23,    21,    18,    22,     2,    24,     2,     2,
+       2,     2,     2,     2,     2,     2,     2,     2,    20,    27,
+       2,    19,     2,     2,    33,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,    26,     2,    27,    24,     2,     2,     2,
+       2,     2,     2,    28,     2,    29,    26,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -1615,9 +1631,9 @@ switch (yytype)
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
-      15,    16
+      15,    16,    17
     };
-    const unsigned user_token_number_max_ = 271;
+    const unsigned user_token_number_max_ = 272;
     const token_number_type undef_token_ = 2;
 
     if (static_cast<int> (t) <= yyeof_)
@@ -1638,28 +1654,28 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 33: // statement
-      case 36: // compound_statement
-      case 37: // expression
-      case 38: // expression_or_nothing
-      case 39: // function_definition
-      case 40: // type
-      case 41: // identifier
-      case 42: // literal
-      case 43: // string_literal
+      case 36: // statement
+      case 39: // compound_statement
+      case 40: // expression
+      case 41: // expression_or_nothing
+      case 42: // function_definition
+      case 43: // type
+      case 44: // identifier
+      case 45: // literal
+      case 46: // string_literal
         value.move< kasm::ast::Node* > (std::move (that.value));
         break;
 
-      case 16: // TYPE
+      case 17: // TYPE
         value.move< kasm::ast::Type > (std::move (that.value));
         break;
 
-      case 13: // IDENTIFIER
-      case 14: // STRING
+      case 14: // IDENTIFIER
+      case 15: // STRING
         value.move< std::string > (std::move (that.value));
         break;
 
-      case 15: // LITERAL
+      case 16: // LITERAL
         value.move< std::uint32_t > (std::move (that.value));
         break;
 
@@ -1678,28 +1694,28 @@ switch (yytype)
   {
     switch (this->type_get ())
     {
-      case 33: // statement
-      case 36: // compound_statement
-      case 37: // expression
-      case 38: // expression_or_nothing
-      case 39: // function_definition
-      case 40: // type
-      case 41: // identifier
-      case 42: // literal
-      case 43: // string_literal
+      case 36: // statement
+      case 39: // compound_statement
+      case 40: // expression
+      case 41: // expression_or_nothing
+      case 42: // function_definition
+      case 43: // type
+      case 44: // identifier
+      case 45: // literal
+      case 46: // string_literal
         value.copy< kasm::ast::Node* > (YY_MOVE (that.value));
         break;
 
-      case 16: // TYPE
+      case 17: // TYPE
         value.copy< kasm::ast::Type > (YY_MOVE (that.value));
         break;
 
-      case 13: // IDENTIFIER
-      case 14: // STRING
+      case 14: // IDENTIFIER
+      case 15: // STRING
         value.copy< std::string > (YY_MOVE (that.value));
         break;
 
-      case 15: // LITERAL
+      case 16: // LITERAL
         value.copy< std::uint32_t > (YY_MOVE (that.value));
         break;
 
@@ -1725,28 +1741,28 @@ switch (yytype)
     super_type::move (s);
     switch (this->type_get ())
     {
-      case 33: // statement
-      case 36: // compound_statement
-      case 37: // expression
-      case 38: // expression_or_nothing
-      case 39: // function_definition
-      case 40: // type
-      case 41: // identifier
-      case 42: // literal
-      case 43: // string_literal
+      case 36: // statement
+      case 39: // compound_statement
+      case 40: // expression
+      case 41: // expression_or_nothing
+      case 42: // function_definition
+      case 43: // type
+      case 44: // identifier
+      case 45: // literal
+      case 46: // string_literal
         value.move< kasm::ast::Node* > (YY_MOVE (s.value));
         break;
 
-      case 16: // TYPE
+      case 17: // TYPE
         value.move< kasm::ast::Type > (YY_MOVE (s.value));
         break;
 
-      case 13: // IDENTIFIER
-      case 14: // STRING
+      case 14: // IDENTIFIER
+      case 15: // STRING
         value.move< std::string > (YY_MOVE (s.value));
         break;
 
-      case 15: // LITERAL
+      case 16: // LITERAL
         value.move< std::uint32_t > (YY_MOVE (s.value));
         break;
 
@@ -1815,9 +1831,9 @@ switch (yytype)
     yytoken_number_[] =
     {
        0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
-     265,   266,   267,   268,   269,   270,   271,    44,    61,    43,
-      45,    42,    47,    37,   126,    59,   123,   125,    40,    41,
-      58
+     265,   266,   267,   268,   269,   270,   271,   272,    44,    61,
+      58,    43,    45,    42,    47,    37,   126,    59,   123,   125,
+      40,    41,    38,    64
     };
     return token_type (yytoken_number_[type]);
   }

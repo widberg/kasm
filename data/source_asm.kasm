@@ -1,18 +1,48 @@
 entry:
 	copy $fp, $sp
 .data
-x:
-	.space 1
+file:
+	.space 4
 .text
+la $t0, file
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+.data
+_0:
+	.asciiz "source.k"
+.text
+	la $t0, _0
+	copy $4, $t0
+	li $t0, 1
+	copy $5, $t0
+	call fopen
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	sw $t0, ($t1)
+.data
+x:
+	.space 4
+.text
+	la $t0, x
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
 	li $t0, 2
-	sb $t0, x
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	sw $t0, ($t1)
 .data
 i:
-	.space 1
+	.space 4
 .text
+la $t0, i
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
 	li $t0, 1
-	sb $t0, i
-	lb $t0, i
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	sw $t0, ($t1)
+	la $t0, i
+	lw $t0, ($t0)
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
 	li $t0, 100
@@ -21,9 +51,10 @@ i:
 	slt $t2, $t1, $t0
 	seq $t0, $t0, $t1
 	or $t0, $t0, $t2
-	beqz $t0, _2
-_0:
-	lb $t0, i
+	beqz $t0, _3
+_1:
+	la $t0, i
+	lw $t0, ($t0)
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
 	li $t0, 3
@@ -38,7 +69,8 @@ _0:
 	seq $t0, $t1, $t0
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
-	lb $t0, i
+	la $t0, i
+	lw $t0, ($t0)
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
 	li $t0, 5
@@ -56,17 +88,18 @@ _0:
 	sne $t0, $t0, $zero
 	sne $t1, $t1, $zero
 	and $t0, $t1, $t0
-	beqz $t0, _4
+	beqz $t0, _5
 .data
-_5:
+_6:
 	.asciiz "fizzbuzz\n"
 .text
-	la $t0, _5
+	la $t0, _6
 	copy $4, $t0
 	call print
-	b _3
-_4:
-	lb $t0, i
+	b _4
+_5:
+	la $t0, i
+	lw $t0, ($t0)
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
 	li $t0, 3
@@ -79,17 +112,18 @@ _4:
 	addi $gp, $gp, -4
 	lw $t1, 0($gp)
 	seq $t0, $t1, $t0
-	beqz $t0, _7
+	beqz $t0, _8
 .data
-_8:
+_9:
 	.asciiz "fizz\n"
 .text
-	la $t0, _8
+	la $t0, _9
 	copy $4, $t0
 	call print
-	b _6
-_7:
-	lb $t0, i
+	b _7
+_8:
+	la $t0, i
+	lw $t0, ($t0)
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
 	li $t0, 5
@@ -102,39 +136,47 @@ _7:
 	addi $gp, $gp, -4
 	lw $t1, 0($gp)
 	seq $t0, $t1, $t0
-	beqz $t0, _10
-.data
-_11:
-	.asciiz "buzz\n"
-.text
-	la $t0, _11
-	copy $4, $t0
-	call print
-	b _9
-_10:
-	lb $t0, i
-	copy $4, $t0
-	call printi
+	beqz $t0, _11
 .data
 _12:
-	.asciiz "\n"
+	.asciiz "buzz\n"
 .text
 	la $t0, _12
 	copy $4, $t0
 	call print
-_9:
-_6:
-_3:
-_1:
-	lb $t0, i
+	b _10
+_11:
+	la $t0, i
+	lw $t0, ($t0)
+	copy $4, $t0
+	call printi
+.data
+_13:
+	.asciiz "\n"
+.text
+	la $t0, _13
+	copy $4, $t0
+	call print
+_10:
+_7:
+_4:
+_2:
+	la $t0, i
+	sw $t0, 0($gp)
+	addi $gp, $gp, 4
+	la $t0, i
+	lw $t0, ($t0)
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
 	li $t0, 1
 	addi $gp, $gp, -4
 	lw $t1, 0($gp)
 	add $t0, $t1, $t0
-	sb $t0, i
-	lb $t0, i
+	addi $gp, $gp, -4
+	lw $t1, 0($gp)
+	sw $t0, ($t1)
+	la $t0, i
+	lw $t0, ($t0)
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
 	li $t0, 100
@@ -143,12 +185,17 @@ _1:
 	slt $t2, $t1, $t0
 	seq $t0, $t0, $t1
 	or $t0, $t0, $t2
-	bne $t0, $zero, _0
-_2:
+	bne $t0, $zero, _1
+_3:
+	la $t0, file
+	lw $t0, ($t0)
+	copy $4, $t0
+	call fclose
 	li $t0, 10
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
-	lb $t0, x
+	la $t0, x
+	lw $t0, ($t0)
 	copy $4, $t0
 	call test
 	addi $gp, $gp, -4
@@ -162,7 +209,8 @@ test:
 	enter
 	addi $sp, $sp, -4
 	sw $8, -4($fp)
-	lb $t0, x
+	la $t0, x
+	lw $t0, ($t0)
 	sw $t0, 0($gp)
 	addi $gp, $gp, 4
 	li $t0, 5
@@ -186,6 +234,27 @@ print:
 	sw $8, -4($fp)
 
 		li $v0, 6
+		sys
+	
+	ret
+fopen:
+	enter
+	addi $sp, $sp, -4
+	sw $8, -4($fp)
+	addi $sp, $sp, -4
+	sw $12, -8($fp)
+
+		li $v0, 9
+		sys
+		copy $t0, $v0
+	
+	ret
+fclose:
+	enter
+	addi $sp, $sp, -4
+	sw $8, -4($fp)
+
+		li $v0, 10
 		sys
 	
 	ret

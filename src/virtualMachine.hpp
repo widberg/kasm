@@ -34,6 +34,12 @@ namespace kasm
 		void systemCall();
 		std::uint32_t resolveAddress(const InstructionData& instructionData, AddressType type);
 
+		InstructionData fetchInstruction();
+		void run();
+		void step();
+		void reset();
+		void executeInstruction(const InstructionData& instructionData);
+
 		std::uint32_t pc, hi, lo;
 		bool shouldExit;
 		int exitCode;
@@ -163,8 +169,13 @@ namespace kasm
 			WRITE_STRING,
 			ALLOCATE,
 			DEALLOCATE,
+			OPEN_FILE,
+			CLOSE_FILE,
+			SEEK
 		};
 
 		std::unordered_map<Signal, void(*)(void)> signalHandlers;
+		std::unordered_map<std::uint32_t, std::fstream*> files;
+		std::uint32_t fileID = 1;
 	};
 }
