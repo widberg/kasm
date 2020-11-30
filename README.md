@@ -30,15 +30,11 @@ cmake --build .
 
 ### Tools
 
-✅ kasm - Assembler
-
-✅ kdsm - Disassembler
-
-✅ kvm - Virtual Machine
-
-🟩 kdbg - Debugger
-
-⬜ klang - K Structured Programming Language Compiler
+* kasm - Assembler
+* kdsm - Disassembler
+* kvm - Virtual Machine
+* kdbg - Debugger
+* klang - K Structured Programming Language Compiler
 
 ## kasm/kvm
 
@@ -60,7 +56,7 @@ cmake --build .
 | .message "msg" | Print `msg` to the standard output stream |
 | .error "msg" | Print `msg` to the standard output stream and throw an assembler exception |
 | .dbg "msg" | Dummy directive to test assembler |
-| .dbgbp | In debug builds cause a debug breakpoint |
+| .dbgbp | In debug builds cause a debug breakpoint in the assembler |
 | .define IDENTIFIER XXXXX | Define an inline macro |
 | .macro IDENTIFIER([parameter0[, parameter1]...]) | Begin a macro function definition |
 | .end | End macro function definition |

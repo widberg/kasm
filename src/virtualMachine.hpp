@@ -23,7 +23,9 @@ namespace kasm
 		enum class Signal
 		{
 			SEGMENTATION_FAULT,
-			ILLEGAL_OPCODE
+			ILLEGAL_OPCODE,
+			WATCHED_REGISTER_CHANGED,
+			WATCHED_MEMORY_CHANGED
 		};
 
 		void setSignalHandler(Signal signal, void(*handler)(void));

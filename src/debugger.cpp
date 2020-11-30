@@ -66,7 +66,7 @@ namespace kasm
 			}
 			catch (const Signal& signal)
 			{
-				if (signal == Signal::ILLEGAL_OPCODE && breakpoints.count(pc))
+				if (signal == Signal::ILLEGAL_OPCODE)
 				{
 					if (until.count(pc))
 					{
