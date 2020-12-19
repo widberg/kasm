@@ -1,8 +1,10 @@
-#pragma once
+#ifndef DEBUG_HPP
+#define DEBUG_HPP
 
 #include <cassert>
 
-#define KASM_ASSERT(condition, message) assert((condition) && message)
+#define KASM_ASSERT(condition, message) assert((message, condition))
+#define KASM_STATIC_ASSERT(condition, message) static_assert(condition, message)
 
 #if defined(_DEBUG) || defined(DEBUG) || defined(NDEBUG)
 #define KASM_DEBUG 1
@@ -60,4 +62,7 @@ static inline void KASM_BREAKPOINT(void) { __asm__ __volatile__("NOP\n .word 0x1
 #if !KASM_DEBUG
 #define KASM_BREAKPOINT()
 #define KASM_ASSERT(condition, message)
+#define KASM_STATIC_ASSERT(condition, message)
 #endif
+
+#endif // !DEBUG_HPP

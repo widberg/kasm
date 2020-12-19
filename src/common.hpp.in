@@ -3,7 +3,7 @@
 
 #include "specification.hpp"
 
-#define IS_BIG_ENDIAN 0
+#cmakedefine01 IS_BIG_ENDIAN
 
 namespace kasm
 {
