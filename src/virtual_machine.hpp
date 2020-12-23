@@ -1,7 +1,9 @@
 #ifndef VIRTUAL_MACHINE_HPP
 #define VIRTUAL_MACHINE_HPP
 
+#include "memory.hpp"
 #include "program.hpp"
+#include "registers.hpp"
 #include "specification.hpp"
 
 namespace kasm
@@ -9,11 +11,15 @@ namespace kasm
 	class VirtualMachine
 	{
 	public:
-		VirtualMachine(const Program& program);
+		VirtualMachine(const Program& program_) : memory(program_) {};
 
-		quad_word_t execute();
+		void execute(Instruction instructionData);
+		Instruction fetch();
 
 	private:
+		Memory memory;
+		Registers registers;
+
 		quad_word_t programCounter;
 		byte_t statusRegister;
 
@@ -37,6 +43,7 @@ namespace kasm
 		void appendStatusFlags(byte_t flags);
 		void unsetStatusFlags(byte_t flags);
 		bool testStatusFlags(byte_t flags);
+		void calculateStatusFlags(quad_word_t a, quad_word_t b, quad_word_t result);
 	};
 } // namespace kasm
 

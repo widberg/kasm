@@ -3,6 +3,9 @@
 
 #include "lexer.hpp"
 
+#include <unordered_map>
+#include <vector>
+
 namespace kasm
 {
 	class Parser
@@ -16,8 +19,10 @@ namespace kasm
 		void consumeUntil(TokenType tokenType);
 		void consumeUntilAfter(TokenType tokenType);
 
+		std::vector<Token> parseStatement();
+
 		bool matchAddress();
-		AddressData parseAddress();
+		Address parseAddress();
 
 		bool matchInstruction();
 		OpCode parseInstruction();
@@ -38,6 +43,22 @@ namespace kasm
 		std::string parseIdentifier();
 	private:
 		Lexer lexer;
+
+		enum InstructionLayout
+		{
+			NONE = 0,
+
+			ARGUMENT0_REGISTER0 = 1 << 0,
+			ARGUMENT0_REGISTER1 = 1 << 1,
+			ARGUMENT0_ADDRESS_DIRECT = 1 << 2,
+			ARGUMENT0_ADDRESS_INDIRECT = 1 << 3,
+			ARGUMENT1_REGISTER0 = 1 << 4,
+			ARGUMENT1_REGISTER1 = 1 << 5,
+			ARGUMENT1_ADDRESS_DIRECT = 1 << 6,
+			ARGUMENT1_ADDRESS_INDIRECT = 1 << 7,
+		};
+
+		static const std::unordered_map<OpCode, InstructionLayout> instructionLayouts;
 	};
 } // namespace kasm
 

@@ -37,6 +37,7 @@ namespace kasm
 		BadDirective,
 		BadCharacter,
 		BadAddress,
+		EmptyOperand,
 	};
 
 	struct Location
@@ -61,7 +62,7 @@ namespace kasm
 		Token(TokenType tokenType_, Directive directive_, Location location_) : tokenType(tokenType_), directive(directive_), location(location_) {}
 		Token(TokenType tokenType_, Register reg_, Location location_) : tokenType(tokenType_), reg(reg_), location(location_) {}
 		Token(TokenType tokenType_, LexerError lexerError_, Location location_) : tokenType(tokenType_), lexerError(lexerError_), location(location_) {}
-		Token(TokenType tokenType_, AddressData addressData_, Location location_) : tokenType(tokenType_), addressData(addressData_), location(location_) {}
+		Token(TokenType tokenType_, Address address_, Location location_) : tokenType(tokenType_), address(address_), location(location_) {}
 
 		TokenType tokenType;
 		std::string string;
@@ -75,7 +76,7 @@ namespace kasm
 			Directive directive;
 			Register reg;
 			LexerError lexerError;
-			AddressData addressData;
+			Address address;
 		};
 
 		Location location;

@@ -1,0 +1,799 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   sodipodi:docname="sign.svg"
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)"
+   id="svg889"
+   version="1.1"
+   viewBox="0 0 160.46861 108.76029"
+   height="108.76029mm"
+   width="160.46861mm">
+  <defs
+     id="defs883">
+    <inkscape:path-effect
+       effect="bspline"
+       id="path-effect1006"
+       is_visible="true"
+       weight="33.333333"
+       steps="2"
+       helper_size="0"
+       apply_no_weight="true"
+       apply_with_weight="true"
+       only_selected="false" />
+    <inkscape:path-effect
+       effect="bspline"
+       id="path-effect1002"
+       is_visible="true"
+       weight="33.333333"
+       steps="2"
+       helper_size="0"
+       apply_no_weight="true"
+       apply_with_weight="true"
+       only_selected="false" />
+    <inkscape:path-effect
+       effect="bspline"
+       id="path-effect998"
+       is_visible="true"
+       weight="33.333333"
+       steps="2"
+       helper_size="0"
+       apply_no_weight="true"
+       apply_with_weight="true"
+       only_selected="false" />
+    <inkscape:path-effect
+       effect="bspline"
+       id="path-effect994"
+       is_visible="true"
+       weight="33.333333"
+       steps="2"
+       helper_size="0"
+       apply_no_weight="true"
+       apply_with_weight="true"
+       only_selected="false" />
+    <inkscape:path-effect
+       effect="bspline"
+       id="path-effect990"
+       is_visible="true"
+       weight="33.333333"
+       steps="2"
+       helper_size="0"
+       apply_no_weight="true"
+       apply_with_weight="true"
+       only_selected="false" />
+    <inkscape:path-effect
+       effect="bspline"
+       id="path-effect986"
+       is_visible="true"
+       weight="33.333333"
+       steps="2"
+       helper_size="0"
+       apply_no_weight="true"
+       apply_with_weight="true"
+       only_selected="false" />
+    <filter
+       inkscape:label="Rough and Glossy"
+       inkscape:menu="Textures"
+       inkscape:menu-tooltip="Crumpled glossy paper effect which can be used for pictures as for objects"
+       style="color-interpolation-filters:sRGB"
+       id="filter1026">
+      <feTurbulence
+         type="fractalNoise"
+         numOctaves="7"
+         baseFrequency="0.02"
+         seed="55"
+         result="result0"
+         id="feTurbulence1008" />
+      <feDiffuseLighting
+         surfaceScale="4"
+         diffuseConstant="1"
+         kernelUnitLength="1"
+         result="result1"
+         in="result0"
+         id="feDiffuseLighting1012">
+        <feDistantLight
+           azimuth="235"
+           elevation="60"
+           id="feDistantLight1010" />
+      </feDiffuseLighting>
+      <feSpecularLighting
+         in="result0"
+         surfaceScale="3"
+         specularConstant="1"
+         specularExponent="25"
+         kernelUnitLength="1"
+         result="result3"
+         id="feSpecularLighting1016">
+        <feDistantLight
+           azimuth="235"
+           elevation="55"
+           id="feDistantLight1014" />
+      </feSpecularLighting>
+      <feComposite
+         in="result1"
+         in2="SourceGraphic"
+         operator="arithmetic"
+         k1="1"
+         result="result2"
+         id="feComposite1018"
+         k2="0"
+         k3="0"
+         k4="0" />
+      <feComposite
+         in="result2"
+         in2="result3"
+         operator="arithmetic"
+         k2="1"
+         k3="1"
+         result="result4"
+         id="feComposite1020"
+         k1="0"
+         k4="0" />
+      <feComposite
+         in2="SourceAlpha"
+         operator="in"
+         in="result4"
+         result="fbSourceGraphic"
+         id="feComposite1022" />
+      <feDisplacementMap
+         scale="7"
+         yChannelSelector="G"
+         xChannelSelector="R"
+         in2="result0"
+         id="feDisplacementMap1024" />
+    </filter>
+    <filter
+       inkscape:label="Rough and Glossy"
+       inkscape:menu="Textures"
+       inkscape:menu-tooltip="Crumpled glossy paper effect which can be used for pictures as for objects"
+       style="color-interpolation-filters:sRGB"
+       id="filter1046">
+      <feTurbulence
+         type="fractalNoise"
+         numOctaves="7"
+         baseFrequency="0.02"
+         seed="55"
+         result="result0"
+         id="feTurbulence1028" />
+      <feDiffuseLighting
+         surfaceScale="4"
+         diffuseConstant="1"
+         kernelUnitLength="1"
+         result="result1"
+         in="result0"
+         id="feDiffuseLighting1032">
+        <feDistantLight
+           azimuth="235"
+           elevation="60"
+           id="feDistantLight1030" />
+      </feDiffuseLighting>
+      <feSpecularLighting
+         in="result0"
+         surfaceScale="3"
+         specularConstant="1"
+         specularExponent="25"
+         kernelUnitLength="1"
+         result="result3"
+         id="feSpecularLighting1036">
+        <feDistantLight
+           azimuth="235"
+           elevation="55"
+           id="feDistantLight1034" />
+      </feSpecularLighting>
+      <feComposite
+         in="result1"
+         in2="SourceGraphic"
+         operator="arithmetic"
+         k1="1"
+         result="result2"
+         id="feComposite1038"
+         k2="0"
+         k3="0"
+         k4="0" />
+      <feComposite
+         in="result2"
+         in2="result3"
+         operator="arithmetic"
+         k2="1"
+         k3="1"
+         result="result4"
+         id="feComposite1040"
+         k1="0"
+         k4="0" />
+      <feComposite
+         in2="SourceAlpha"
+         operator="in"
+         in="result4"
+         result="fbSourceGraphic"
+         id="feComposite1042" />
+      <feDisplacementMap
+         scale="7"
+         yChannelSelector="G"
+         xChannelSelector="R"
+         in2="result0"
+         id="feDisplacementMap1044" />
+    </filter>
+    <filter
+       inkscape:label="Rough and Glossy"
+       inkscape:menu="Textures"
+       inkscape:menu-tooltip="Crumpled glossy paper effect which can be used for pictures as for objects"
+       style="color-interpolation-filters:sRGB"
+       id="filter1066">
+      <feTurbulence
+         type="fractalNoise"
+         numOctaves="7"
+         baseFrequency="0.02"
+         seed="55"
+         result="result0"
+         id="feTurbulence1048" />
+      <feDiffuseLighting
+         surfaceScale="4"
+         diffuseConstant="1"
+         kernelUnitLength="1"
+         result="result1"
+         in="result0"
+         id="feDiffuseLighting1052">
+        <feDistantLight
+           azimuth="235"
+           elevation="60"
+           id="feDistantLight1050" />
+      </feDiffuseLighting>
+      <feSpecularLighting
+         in="result0"
+         surfaceScale="3"
+         specularConstant="1"
+         specularExponent="25"
+         kernelUnitLength="1"
+         result="result3"
+         id="feSpecularLighting1056">
+        <feDistantLight
+           azimuth="235"
+           elevation="55"
+           id="feDistantLight1054" />
+      </feSpecularLighting>
+      <feComposite
+         in="result1"
+         in2="SourceGraphic"
+         operator="arithmetic"
+         k1="1"
+         result="result2"
+         id="feComposite1058"
+         k2="0"
+         k3="0"
+         k4="0" />
+      <feComposite
+         in="result2"
+         in2="result3"
+         operator="arithmetic"
+         k2="1"
+         k3="1"
+         result="result4"
+         id="feComposite1060"
+         k1="0"
+         k4="0" />
+      <feComposite
+         in2="SourceAlpha"
+         operator="in"
+         in="result4"
+         result="fbSourceGraphic"
+         id="feComposite1062" />
+      <feDisplacementMap
+         scale="7"
+         yChannelSelector="G"
+         xChannelSelector="R"
+         in2="result0"
+         id="feDisplacementMap1064" />
+    </filter>
+    <filter
+       inkscape:label="Rough and Glossy"
+       inkscape:menu="Textures"
+       inkscape:menu-tooltip="Crumpled glossy paper effect which can be used for pictures as for objects"
+       style="color-interpolation-filters:sRGB"
+       id="filter1086">
+      <feTurbulence
+         type="fractalNoise"
+         numOctaves="7"
+         baseFrequency="0.02"
+         seed="55"
+         result="result0"
+         id="feTurbulence1068" />
+      <feDiffuseLighting
+         surfaceScale="4"
+         diffuseConstant="1"
+         kernelUnitLength="1"
+         result="result1"
+         in="result0"
+         id="feDiffuseLighting1072">
+        <feDistantLight
+           azimuth="235"
+           elevation="60"
+           id="feDistantLight1070" />
+      </feDiffuseLighting>
+      <feSpecularLighting
+         in="result0"
+         surfaceScale="3"
+         specularConstant="1"
+         specularExponent="25"
+         kernelUnitLength="1"
+         result="result3"
+         id="feSpecularLighting1076">
+        <feDistantLight
+           azimuth="235"
+           elevation="55"
+           id="feDistantLight1074" />
+      </feSpecularLighting>
+      <feComposite
+         in="result1"
+         in2="SourceGraphic"
+         operator="arithmetic"
+         k1="1"
+         result="result2"
+         id="feComposite1078"
+         k2="0"
+         k3="0"
+         k4="0" />
+      <feComposite
+         in="result2"
+         in2="result3"
+         operator="arithmetic"
+         k2="1"
+         k3="1"
+         result="result4"
+         id="feComposite1080"
+         k1="0"
+         k4="0" />
+      <feComposite
+         in2="SourceAlpha"
+         operator="in"
+         in="result4"
+         result="fbSourceGraphic"
+         id="feComposite1082" />
+      <feDisplacementMap
+         scale="7"
+         yChannelSelector="G"
+         xChannelSelector="R"
+         in2="result0"
+         id="feDisplacementMap1084" />
+    </filter>
+    <filter
+       inkscape:label="Rough and Glossy"
+       inkscape:menu="Textures"
+       inkscape:menu-tooltip="Crumpled glossy paper effect which can be used for pictures as for objects"
+       style="color-interpolation-filters:sRGB"
+       id="filter1106">
+      <feTurbulence
+         type="fractalNoise"
+         numOctaves="7"
+         baseFrequency="0.02"
+         seed="55"
+         result="result0"
+         id="feTurbulence1088" />
+      <feDiffuseLighting
+         surfaceScale="4"
+         diffuseConstant="1"
+         kernelUnitLength="1"
+         result="result1"
+         in="result0"
+         id="feDiffuseLighting1092">
+        <feDistantLight
+           azimuth="235"
+           elevation="60"
+           id="feDistantLight1090" />
+      </feDiffuseLighting>
+      <feSpecularLighting
+         in="result0"
+         surfaceScale="3"
+         specularConstant="1"
+         specularExponent="25"
+         kernelUnitLength="1"
+         result="result3"
+         id="feSpecularLighting1096">
+        <feDistantLight
+           azimuth="235"
+           elevation="55"
+           id="feDistantLight1094" />
+      </feSpecularLighting>
+      <feComposite
+         in="result1"
+         in2="SourceGraphic"
+         operator="arithmetic"
+         k1="1"
+         result="result2"
+         id="feComposite1098"
+         k2="0"
+         k3="0"
+         k4="0" />
+      <feComposite
+         in="result2"
+         in2="result3"
+         operator="arithmetic"
+         k2="1"
+         k3="1"
+         result="result4"
+         id="feComposite1100"
+         k1="0"
+         k4="0" />
+      <feComposite
+         in2="SourceAlpha"
+         operator="in"
+         in="result4"
+         result="fbSourceGraphic"
+         id="feComposite1102" />
+      <feDisplacementMap
+         scale="7"
+         yChannelSelector="G"
+         xChannelSelector="R"
+         in2="result0"
+         id="feDisplacementMap1104" />
+    </filter>
+    <filter
+       inkscape:label="Rough and Glossy"
+       inkscape:menu="Textures"
+       inkscape:menu-tooltip="Crumpled glossy paper effect which can be used for pictures as for objects"
+       style="color-interpolation-filters:sRGB"
+       id="filter1126">
+      <feTurbulence
+         type="fractalNoise"
+         numOctaves="7"
+         baseFrequency="0.02"
+         seed="55"
+         result="result0"
+         id="feTurbulence1108" />
+      <feDiffuseLighting
+         surfaceScale="4"
+         diffuseConstant="1"
+         kernelUnitLength="1"
+         result="result1"
+         in="result0"
+         id="feDiffuseLighting1112">
+        <feDistantLight
+           azimuth="235"
+           elevation="60"
+           id="feDistantLight1110" />
+      </feDiffuseLighting>
+      <feSpecularLighting
+         in="result0"
+         surfaceScale="3"
+         specularConstant="1"
+         specularExponent="25"
+         kernelUnitLength="1"
+         result="result3"
+         id="feSpecularLighting1116">
+        <feDistantLight
+           azimuth="235"
+           elevation="55"
+           id="feDistantLight1114" />
+      </feSpecularLighting>
+      <feComposite
+         in="result1"
+         in2="SourceGraphic"
+         operator="arithmetic"
+         k1="1"
+         result="result2"
+         id="feComposite1118"
+         k2="0"
+         k3="0"
+         k4="0" />
+      <feComposite
+         in="result2"
+         in2="result3"
+         operator="arithmetic"
+         k2="1"
+         k3="1"
+         result="result4"
+         id="feComposite1120"
+         k1="0"
+         k4="0" />
+      <feComposite
+         in2="SourceAlpha"
+         operator="in"
+         in="result4"
+         result="fbSourceGraphic"
+         id="feComposite1122" />
+      <feDisplacementMap
+         scale="7"
+         yChannelSelector="G"
+         xChannelSelector="R"
+         in2="result0"
+         id="feDisplacementMap1124" />
+    </filter>
+    <filter
+       inkscape:label="Rough and Glossy"
+       inkscape:menu="Textures"
+       inkscape:menu-tooltip="Crumpled glossy paper effect which can be used for pictures as for objects"
+       style="color-interpolation-filters:sRGB"
+       id="filter1146">
+      <feTurbulence
+         type="fractalNoise"
+         numOctaves="7"
+         baseFrequency="0.02"
+         seed="55"
+         result="result0"
+         id="feTurbulence1128" />
+      <feDiffuseLighting
+         surfaceScale="4"
+         diffuseConstant="1"
+         kernelUnitLength="1"
+         result="result1"
+         in="result0"
+         id="feDiffuseLighting1132">
+        <feDistantLight
+           azimuth="235"
+           elevation="60"
+           id="feDistantLight1130" />
+      </feDiffuseLighting>
+      <feSpecularLighting
+         in="result0"
+         surfaceScale="3"
+         specularConstant="1"
+         specularExponent="25"
+         kernelUnitLength="1"
+         result="result3"
+         id="feSpecularLighting1136">
+        <feDistantLight
+           azimuth="235"
+           elevation="55"
+           id="feDistantLight1134" />
+      </feSpecularLighting>
+      <feComposite
+         in="result1"
+         in2="SourceGraphic"
+         operator="arithmetic"
+         k1="1"
+         result="result2"
+         id="feComposite1138"
+         k2="0"
+         k3="0"
+         k4="0" />
+      <feComposite
+         in="result2"
+         in2="result3"
+         operator="arithmetic"
+         k2="1"
+         k3="1"
+         result="result4"
+         id="feComposite1140"
+         k1="0"
+         k4="0" />
+      <feComposite
+         in2="SourceAlpha"
+         operator="in"
+         in="result4"
+         result="fbSourceGraphic"
+         id="feComposite1142" />
+      <feDisplacementMap
+         scale="7"
+         yChannelSelector="G"
+         xChannelSelector="R"
+         in2="result0"
+         id="feDisplacementMap1144" />
+    </filter>
+    <filter
+       inkscape:label="Rough and Glossy"
+       inkscape:menu="Textures"
+       inkscape:menu-tooltip="Crumpled glossy paper effect which can be used for pictures as for objects"
+       style="color-interpolation-filters:sRGB"
+       id="filter1181">
+      <feTurbulence
+         type="fractalNoise"
+         numOctaves="7"
+         baseFrequency="0.02"
+         seed="55"
+         result="result0"
+         id="feTurbulence1163" />
+      <feDiffuseLighting
+         surfaceScale="4"
+         diffuseConstant="1"
+         kernelUnitLength="1"
+         result="result1"
+         in="result0"
+         id="feDiffuseLighting1167">
+        <feDistantLight
+           azimuth="235"
+           elevation="60"
+           id="feDistantLight1165" />
+      </feDiffuseLighting>
+      <feSpecularLighting
+         in="result0"
+         surfaceScale="3"
+         specularConstant="1"
+         specularExponent="25"
+         kernelUnitLength="1"
+         result="result3"
+         id="feSpecularLighting1171">
+        <feDistantLight
+           azimuth="235"
+           elevation="55"
+           id="feDistantLight1169" />
+      </feSpecularLighting>
+      <feComposite
+         in="result1"
+         in2="SourceGraphic"
+         operator="arithmetic"
+         k1="1"
+         result="result2"
+         id="feComposite1173"
+         k2="0"
+         k3="0"
+         k4="0" />
+      <feComposite
+         in="result2"
+         in2="result3"
+         operator="arithmetic"
+         k2="1"
+         k3="1"
+         result="result4"
+         id="feComposite1175"
+         k1="0"
+         k4="0" />
+      <feComposite
+         in2="SourceAlpha"
+         operator="in"
+         in="result4"
+         result="fbSourceGraphic"
+         id="feComposite1177" />
+      <feDisplacementMap
+         scale="7"
+         yChannelSelector="G"
+         xChannelSelector="R"
+         in2="result0"
+         id="feDisplacementMap1179" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="22.140265"
+     inkscape:cy="178.74343"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     showguides="false" />
+  <metadata
+     id="metadata886">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-20.125395,-135.07736)">
+    <g
+       id="g946"
+       transform="translate(0,-6.879167)"
+       style="stroke:#000000;stroke-width:0.26499999;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter1146)">
+      <path
+         sodipodi:nodetypes="ccccccc"
+         inkscape:connector-curvature="0"
+         id="path1442-6"
+         d="M 111.26526,155.41329 H 140.799 l 3.74132,2.40521 -3.74132,2.40565 h -29.66737 0.13363 z"
+         style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <path
+         sodipodi:nodetypes="ccccccc"
+         inkscape:connector-curvature="0"
+         id="path1442-6-4"
+         d="M 111.26526,149.54409 H 81.73152 l -3.74132,2.40521 3.74132,2.40565 h 29.66737 -0.13363 z"
+         style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <path
+         sodipodi:nodetypes="ccccccc"
+         inkscape:connector-curvature="0"
+         id="path1442-6-4-6"
+         d="m 111.26526,161.28249 -4.00016,-3.1211 -1.79115,-0.10083 0.3957,2.44519 5.39561,5.5876 v 0 z"
+         style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path1493"
+         d="m 111.26526,154.35495 v 1.05834"
+         style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path1495"
+         d="m 111.26526,160.22415 v 1.05834"
+         style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path1497"
+         d="m 111.26526,149.54409 v -0.82888"
+         style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path1499"
+         d="m 111.26526,166.09335 v 50.20873"
+         style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+    </g>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter1126)"
+       d="m 111.26526,216.30208 c -3.81342,-7.62311 -7.62678,-15.24612 -11.493339,-20.12661 -3.866561,-4.88049 -7.786566,-7.01868 -8.944674,-9.53568 -1.158107,-2.51701 0.445472,-5.41236 0.02236,-7.81751 -0.423114,-2.40515 -2.87335,-4.32079 -5.323357,-6.23625"
+       id="path984"
+       inkscape:connector-curvature="0"
+       inkscape:path-effect="#path-effect986"
+       inkscape:original-d="m 111.26526,216.30208 c -3.8131,-7.62327 -7.62646,-15.24628 -11.440092,-22.86903 -3.919635,-2.13839 -7.839641,-4.27657 -11.759861,-6.41446 1.60392,-2.89576 3.207502,-5.79111 4.810853,-8.68626 -2.449439,-1.91549 -4.899676,-3.83113 -7.349911,-5.7463" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter1106)"
+       d="m 90.604368,217.22004 c -3.608138,-3.60814 -7.216276,-7.21627 -9.265356,-11.04725 -2.04908,-3.83098 -2.539073,-7.88456 -3.251749,-10.35667 -0.712676,-2.4721 -1.648173,-3.36305 -1.870878,-5.52364 -0.222705,-2.16058 0.267286,-5.59052 -0.222751,-8.46356 -0.490037,-2.87303 -1.960021,-5.18937 -3.429959,-7.50564"
+       id="path988"
+       inkscape:connector-curvature="0"
+       inkscape:path-effect="#path-effect990"
+       inkscape:original-d="m 90.604368,217.22004 c -3.607874,-3.6084 -7.21601,-7.21654 -10.824414,-10.82441 -0.48973,-4.05386 -0.979725,-8.10744 -1.469982,-12.16077 -0.935128,-0.89111 -1.870623,-1.78206 -2.80633,-2.67269 0.490261,-3.43024 0.980252,-6.86018 1.469981,-10.28988 -1.469718,-2.3166 -2.939702,-4.63294 -4.409948,-6.94901"
+       sodipodi:nodetypes="cccccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter1086)"
+       d="m 90.604368,217.22004 c -8.508016,-5.56807 -17.016094,-11.13618 -23.608674,-14.14298 -6.592581,-3.00679 -11.26976,-3.45224 -14.499457,-5.96922 -3.229698,-2.51699 -5.011406,-7.10489 -7.5949,-10.51245 -2.583494,-3.40756 -5.969015,-5.63487 -9.35449,-7.86216"
+       id="path992"
+       inkscape:connector-curvature="0"
+       inkscape:path-effect="#path-effect994"
+       inkscape:original-d="m 90.604368,217.22004 c -8.507815,-5.56838 -17.015894,-11.13649 -25.524237,-16.70434 -4.67699,-0.44572 -9.354169,-0.89117 -14.031651,-1.33635 -1.781625,-4.58862 -3.563329,-9.17652 -5.34539,-13.76438 -3.385047,-2.22744 -6.770566,-4.45476 -10.156243,-6.68174" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter1066)"
+       d="m 63.342876,224.56995 c -5.567978,-2.27173 -11.136094,-4.54352 -15.122986,-7.90679 -3.986891,-3.36327 -6.392263,-7.81766 -8.998029,-10.71299 -2.605766,-2.89533 -5.412151,-4.23171 -7.238589,-6.68187 -1.826439,-2.45017 -2.672758,-6.01362 -3.830856,-8.44118 -1.158097,-2.42756 -2.628158,-3.71943 -4.098159,-5.01125"
+       id="path996"
+       inkscape:connector-curvature="0"
+       inkscape:path-effect="#path-effect998"
+       inkscape:original-d="m 63.342876,224.56995 c -5.567849,-2.27205 -11.135965,-4.54384 -16.704344,-6.81537 -2.405218,-4.45486 -4.810588,-8.90925 -7.216277,-13.36347 -2.806007,-1.33659 -5.612395,-2.67296 -8.418989,-4.00905 -0.846124,-3.564 -1.692444,-7.12745 -2.539061,-10.69078 -1.469638,-1.292 -2.939701,-2.58387 -4.409948,-3.87541" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter1046)"
+       d="m 111.26526,216.30208 c 3.79002,-5.59811 7.60784,-11.23728 12.47183,-13.6232 4.864,-2.38592 10.7888,-1.53952 15.35462,-2.40823 4.56582,-0.86871 7.77318,-3.45241 11.00256,-5.2341 3.22937,-1.78168 6.48144,-2.76176 9.7329,-3.74165"
+       id="path1000"
+       inkscape:connector-curvature="0"
+       inkscape:path-effect="#path-effect1002"
+       inkscape:original-d="m 111.26526,216.30208 c 3.75954,-5.61875 7.6079,-11.23724 11.41145,-16.85546 5.92442,0.84604 11.84922,1.69244 17.77342,2.53906 3.20738,-2.58377 6.41474,-5.16747 9.62171,-7.75082 3.25175,-0.98016 6.50382,-1.96024 9.75533,-2.93996" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter1026)"
+       d="m 124.81487,224.70359 c 4.27736,-3.65358 8.55291,-7.30561 13.69785,-9.55503 5.14494,-2.24941 11.1585,-3.09577 16.16982,-4.20943 5.01132,-1.11365 9.02036,-2.49455 12.65063,-4.34312 3.63027,-1.84857 6.88232,-4.16509 10.13379,-6.48121"
+       id="path1004"
+       inkscape:connector-curvature="0"
+       inkscape:path-effect="#path-effect1006"
+       inkscape:original-d="m 124.81487,224.70359 c 4.27734,-3.6536 8.55289,-7.30563 12.82893,-10.95805 6.01383,-0.84662 12.02739,-1.69297 18.0407,-2.53906 4.00931,-1.38116 8.01835,-2.76205 12.02713,-4.14268 3.25177,-2.31641 6.50382,-4.63294 9.75533,-6.949"
+       sodipodi:nodetypes="ccccc"
+       transform="translate(-2.1381562,2.4054258)" />
+    <g
+       id="g1161"
+       style="filter:url(#filter1181)">
+      <path
+         inkscape:connector-curvature="0"
+         id="path1148"
+         d="m 87.690475,237.27976 11.339287,-20.5997 7.181548,19.08779"
+         style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path1150"
+         d="m 99.02976,216.68006 0.755954,-30.99405"
+         style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path1152"
+         d="m 87.690475,200.0491 21.355655,0.18899"
+         style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path1154"
+         d="m 108.57367,178.78795 a 8.5044641,7.0870538 0 0 1 -8.50447,7.08705 8.5044641,7.0870538 0 0 1 -8.504465,-7.08705 8.5044641,7.0870538 0 0 1 8.504465,-7.08706 8.5044641,7.0870538 0 0 1 8.50447,7.08706 z"
+         style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.26499999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+    </g>
+  </g>
+</svg>

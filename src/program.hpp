@@ -2,7 +2,7 @@
 #define PROGRAM_HPP
 
 #include <filesystem>
-#include <sstream>
+#include <vector>
 
 #include "specification.hpp"
 
@@ -17,29 +17,29 @@ namespace kasm
 		void seek(program_pos_t position_);
 		program_pos_t tell();
 
-		void align(program_size_t alignemnt);
+		void align(program_size_t alignment);
 		void pad(program_size_t size);
-
-		byte_t readByte();
-		word_t readWord();
-		double_word_t readDoubleWord();
-		quad_word_t readQuadWord();
 		
-		void writeByte(byte_t byte);
-		void writeWord(word_t word);
-		void writeDoubleWord(double_word_t doubleWord);
-		void writeQuadWord(quad_word_t quadWord);
+		template <typename T>
+		T& at(program_pos_t address);
+
+		template <typename T>
+		void write(T data);
+
 		void writeData(const byte_t* const pData, program_size_t size);
 
 		static Program readProgramFromFile(const std::filesystem::path& path);
 		static void writeProgramToFile(const std::filesystem::path& path, const Program& program);
 
-		static const program_pos_t BEG = 0;
-		static const program_pos_t END = std::numeric_limits<program_pos_t>::max();
+		static constexpr program_pos_t BEG = 0;
+		static constexpr program_pos_t END = std::numeric_limits<program_pos_t>::max();
 	private:
-		std::stringstream textSegment, dataSegment;
+		std::vector<byte_t> textSegment;
+		std::vector<byte_t> dataSegment;
 		program_pos_t position;
 	};
 } // namespace kasm
+
+#include "program.tpp"
 
 #endif // !PROGRAM_HPP

@@ -1,3 +1,11 @@
+<img align="left" src="https://raw.githubusercontent.com/widberg/kasm/logo.svg" width="120px"/>
+
+[![Build status][actions-svg]][actions]
+
+[actions-svg]:       https://github.com/widberg/kasm/workflows/build/badge.svg
+
+[actions]:           https://github.com/widberg/kasm/actions?query=workflow%3Abuild
+
 # kasm
 
 A MIPS-like virtual machine, compiler, and assembler.

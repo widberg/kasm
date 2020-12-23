@@ -40,7 +40,12 @@ add_library(kcommon STATIC
 	src/lexer.hpp src/lexer.cpp
 	src/token.hpp src/token.cpp
 	src/node.hpp src/node.cpp
-	src/program.hpp src/program.cpp
+	src/program.hpp src/program.cpp src/program.tpp
+	src/registers.hpp src/registers.cpp
+	src/exception.hpp src/exception.cpp
+	src/linker.hpp src/linker.cpp
+	src/instruction.hpp src/instruction.cpp
+	src/memory.hpp src/memory.cpp src/memory.tpp
 )
 target_include_directories(kcommon PUBLIC src)
 

@@ -16,6 +16,7 @@ namespace kasm
 		Token next();
 		Token peek();
 	private:
+		bool match(char a);
 		bool match(char a, char b);
 		bool match(char a, char b, char c);
 		bool isCommentStart();

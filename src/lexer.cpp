@@ -217,6 +217,11 @@ namespace kasm
 		return bufferedToken;
 	}
 
+	bool Lexer::match(char a)
+	{
+		return *cursor == a;
+	}
+
 	bool Lexer::match(char a, char b)
 	{
 		if (*cursor == '\0' || *(cursor + 1) == '\0')

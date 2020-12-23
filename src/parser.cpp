@@ -4,6 +4,10 @@
 
 namespace kasm
 {
+	const std::unordered_map<OpCode, Parser::InstructionLayout> Parser::instructionLayouts = {
+		{ OpCode::Add, Parser::InstructionLayout::ARGUMENT0_REGISTER0 | Parser::InstructionLayout::ARGUMENT1_REGISTER1 },
+	};
+
 	bool Parser::match(TokenType tokenType)
 	{
 		return lexer.peek().tokenType == tokenType;
@@ -32,6 +36,26 @@ namespace kasm
 		while (parseToken().tokenType != tokenType);
 	}
 
+	std::vector<Token> Parser::parseStatement()
+	{
+		std::vector<Token> tokens;
+
+		if (matchAddress())
+		{
+
+		}
+		else if (match(TokenType::Comma))
+		{
+
+		}
+		else
+		{
+
+		}
+
+		return tokens;
+	}
+
 	bool Parser::matchAddress()
 	{
 		TokenType tokenType = lexer.peek().tokenType;
@@ -40,11 +64,11 @@ namespace kasm
 			tokenType == TokenType::IntegerLiteral;
 	}
 
-	AddressData Parser::parseAddress()
+	Address Parser::parseAddress()
 	{
 		KASM_ASSERT(matchAddress(), "Not an address");
 
-		AddressData addressData;
+		Address addressData;
 
 		if (match(TokenType::Integer))
 		{
