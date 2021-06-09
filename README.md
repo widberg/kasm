@@ -124,14 +124,14 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | addu $d, $s, $t  |  |  |
 | and $d, $s, $t  |  |  |
 | andi $d, $s, i  |  |  |
-| beq $d, $s, address |  |  |
-| bgez $d, address  |  |  |
-| bgezal $d, address  |  |  |
-| bgtz $d, address  |  |  |
-| blez $d, address  |  |  |
-| bltz $d, address  |  |  |
-| bltzal $d, address  |  |  |
-| bne $d, $s, address |  |  |
+| beq $f, $s, address |  |  |
+| bgez $f, address  |  |  |
+| bgezal $f, address  |  |  |
+| bgtz $f, address  |  |  |
+| blez $f, address  |  |  |
+| bltz $f, address  |  |  |
+| bltzal $f, address  |  |  |
+| bne $d, $f, address |  |  |
 | div $d, $t  |  |  |
 | divu $d, $t  |  |  |
 | j address  |  |  |
@@ -171,17 +171,17 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 
 | KASM | Operation |
 | --- | --- |
-| add $d, $s, i |  |
-| b address |  |
-| bal address |  |
-| beq $d, i, address |  |
-| beqz $d, address |  |
-| bge $d, $s, address |  |
-| bgt $d, $s, address |  |
-| bgtu $d, $s, address |  |
-| ble $d, $s, address |  |
-| blt $d, $s, address |  |
-| bne $d, i, address |  |
+| add $d, $s, i | addi $d, $s, i |
+| b address | beq $zero, $zero, address |
+| bal address | bgezal $zero, address |
+| beq $f, i, address | ori $at, $zero, i; beq $f, $at, address |
+| beqz $f, address |  |
+| bge $f, $s, address |  |
+| bgt $f, $s, address |  |
+| bgtu $f, $s, address |  |
+| ble $f, $s, address |  |
+| blt $f, $s, address |  |
+| bne $f, i, address |  |
 | call address |  |
 | clr $d |  |
 | copy $d, $t |  |
