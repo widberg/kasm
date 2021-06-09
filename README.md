@@ -2,6 +2,10 @@
 
 A MIPS-like virtual machine, compiler, and assembler.
 
+## Compilers Targeting KASM
+
+* [Kiwi Language Compiler](https://github.com/litala123/kiwi-lang) by [litala123](https://github.com/litala123)
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
@@ -44,9 +48,9 @@ cmake --build .
 | --- | --- |
 | .text | Move the cursor to the first unwritten byte of the text segment |
 | .data | Move the cursor to the first unwritten byte of the data segment |
-| .word i|a[, i|a]... | Align the cursor to the nearest word boundary and writes each immediate or memory direct address as a word to the data segment in sequence |
+| .word i|a\[, i|a\]... | Align the cursor to the nearest word boundary and writes each immediate or memory direct address as a word to the data segment in sequence |
 | .word i|a:X | Align the cursor to the nearest word boundary and writes the immediate or labeled address as a word to the data segment the specified number of times |
-| .byte i|a[, i|a]... | Write each immediate or labeled address as a byte to the data segment in sequence |
+| .byte i|a\[, i|a\]... | Write each immediate or labeled address as a byte to the data segment in sequence |
 | .byte i|a:X | Write the immediate or memory direct address as a byte to the data segment the specified number of times |
 | .align X | Align the cursor to the nearest 2^X address |
 | .ascii "string" | Write the characters of `string` to the data segment as bytes in sequence |
@@ -81,7 +85,7 @@ cmake --build .
 
 Instructions are (1 word | 4 bytes | 32 bits) long.
 
-Addresses are stored inline with the instruction. Bits used for the address fieldS may not be used for the instruction fields.
+Addresses are stored inline with the instruction. Bits used for the address fields may not be used for the instruction fields.
 
 ```text
 |------DDDDDDDDDDDDDDDDDDDDDDDDDD| Direct Address Absolute
@@ -116,6 +120,54 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | --- | --- | --- |
 | add $d, $s, $t | $d = $s + $t; advancePC(); | 0000 00dd ddds ssss tttt t--- ---- ---- |
 | addi $d, $s, i | $d = $s + i; advancePC(); | 0000 01dd ddds ssss iiii iiii iiii iiii |
+ | add $d, $s, $t  |  |  |
+ | addi $d, $s, i  |  |  |
+ | addiu $d, $s, i  |  |  |
+ | addu $d, $s, $t  |  |  |
+ | and $d, $s, $t  |  |  |
+ | andi $d, $s, i  |  |  |
+ | beq $d, $s, address |  |  |
+ | bgez $d, address  |  |  |
+ | bgezal $d, address  |  |  |
+ | bgtz $d, address  |  |  |
+ | blez $d, address  |  |  |
+ | bltz $d, address  |  |  |
+ | bltzal $d, address  |  |  |
+ | bne $d, $s, address |  |  |
+ | div $d, $t  |  |  |
+ | divu $d, $t  |  |  |
+ | j address  |  |  |
+ | jal address  |  |  |
+ | jalr $d, $t  |  |  |
+ | jr $d  |  |  |
+ | lb $d, address  |  |  |
+ | lui $d, i  |  |  |
+ | lw $d, address  |  |  |
+ | mfhi $d  |  |  |
+ | mflo $d  |  |  |
+ | mult $d, $t  |  |  |
+ | multu $d, $t  |  |  |
+ | nor $d, $s, $t  |  |  |
+ | or $d, $s, $t  |  |  |
+ | ori $d, $s, i  |  |  |
+ | sb $d, address  |  |  |
+ | seq $d, $s, $t  |  |  |
+ | sll $d, $s, i  |  |  |
+ | sllv $d, $s, $t  |  |  |
+ | slt $d, $s, $t  |  |  |
+ | slti $d, $s, i  |  |  |
+ | sltiu $d, $s, i  |  |  |
+ | sltu $d, $s, $t  |  |  |
+ | sne $d, $s, $t  |  |  |
+ | sra $d, $s, i  |  |  |
+ | srl $d, $s, i  |  |  |
+ | srlv $d, $s, $t  |  |  |
+ | sub $d, $s, $t  |  |  |
+ | subu $d, $s, $t  |  |  |
+ | sw $d, address  |  |  |
+ | sys |  |  |
+ | xor $d, $s, $t  |  |  |
+ | xori $d, $s, i  |  |  |
 
 ### System Calls
 
@@ -124,6 +176,17 @@ System services are called by storing the service's code in the `$a0` register a
 | Code | Service | Arguments | Returns |
 | --- | --- | --- | --- |
 | 0 | exit | $a1 = exit code |  |
+| 1 | read_int |  | $a0 = word read |
+| 2 | write_int | $a0 = word to write |  |
+| 3 | read_char |  | $a0 = char read |
+| 4 | write_char | $a0 = char to write |  |
+| 5 | read_string | $a0 = buffer address, $a1 = buffer size |  |
+| 6 | write_string | $a0 = null terminated buffer address |  |
+| 7 | allocate | $a0 = size | $v0 = heap address |
+| 8 | deallocate | $a0 = heap address |  |
+| 9 | open_file | $a0 = file name buffer address, $a1 = mode | $v0 = file handle |
+| 10 | close_file | $a0 = file handle |  |
+| 11 | seek | $a0 = file handle, $a1 = distance, $a2 = mode |  |
 
 ### Standard Macro Library
 
