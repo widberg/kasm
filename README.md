@@ -120,54 +120,85 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | --- | --- | --- |
 | add $d, $s, $t | $d = $s + $t; advancePC(); | 0000 00dd ddds ssss tttt t--- ---- ---- |
 | addi $d, $s, i | $d = $s + i; advancePC(); | 0000 01dd ddds ssss iiii iiii iiii iiii |
- | add $d, $s, $t  |  |  |
- | addi $d, $s, i  |  |  |
- | addiu $d, $s, i  |  |  |
- | addu $d, $s, $t  |  |  |
- | and $d, $s, $t  |  |  |
- | andi $d, $s, i  |  |  |
- | beq $d, $s, address |  |  |
- | bgez $d, address  |  |  |
- | bgezal $d, address  |  |  |
- | bgtz $d, address  |  |  |
- | blez $d, address  |  |  |
- | bltz $d, address  |  |  |
- | bltzal $d, address  |  |  |
- | bne $d, $s, address |  |  |
- | div $d, $t  |  |  |
- | divu $d, $t  |  |  |
- | j address  |  |  |
- | jal address  |  |  |
- | jalr $d, $t  |  |  |
- | jr $d  |  |  |
- | lb $d, address  |  |  |
- | lui $d, i  |  |  |
- | lw $d, address  |  |  |
- | mfhi $d  |  |  |
- | mflo $d  |  |  |
- | mult $d, $t  |  |  |
- | multu $d, $t  |  |  |
- | nor $d, $s, $t  |  |  |
- | or $d, $s, $t  |  |  |
- | ori $d, $s, i  |  |  |
- | sb $d, address  |  |  |
- | seq $d, $s, $t  |  |  |
- | sll $d, $s, i  |  |  |
- | sllv $d, $s, $t  |  |  |
- | slt $d, $s, $t  |  |  |
- | slti $d, $s, i  |  |  |
- | sltiu $d, $s, i  |  |  |
- | sltu $d, $s, $t  |  |  |
- | sne $d, $s, $t  |  |  |
- | sra $d, $s, i  |  |  |
- | srl $d, $s, i  |  |  |
- | srlv $d, $s, $t  |  |  |
- | sub $d, $s, $t  |  |  |
- | subu $d, $s, $t  |  |  |
- | sw $d, address  |  |  |
- | sys |  |  |
- | xor $d, $s, $t  |  |  |
- | xori $d, $s, i  |  |  |
+| addiu $d, $s, i  |  |  |
+| addu $d, $s, $t  |  |  |
+| and $d, $s, $t  |  |  |
+| andi $d, $s, i  |  |  |
+| beq $d, $s, address |  |  |
+| bgez $d, address  |  |  |
+| bgezal $d, address  |  |  |
+| bgtz $d, address  |  |  |
+| blez $d, address  |  |  |
+| bltz $d, address  |  |  |
+| bltzal $d, address  |  |  |
+| bne $d, $s, address |  |  |
+| div $d, $t  |  |  |
+| divu $d, $t  |  |  |
+| j address  |  |  |
+| jal address  |  |  |
+| jalr $d, $t  |  |  |
+| jr $d  |  |  |
+| lb $d, address  |  |  |
+| lui $d, i  |  |  |
+| lw $d, address  |  |  |
+| mfhi $d  |  |  |
+| mflo $d  |  |  |
+| mult $d, $t  |  |  |
+| multu $d, $t  |  |  |
+| nor $d, $s, $t  |  |  |
+| or $d, $s, $t  |  |  |
+| ori $d, $s, i  |  |  |
+| sb $d, address  |  |  |
+| seq $d, $s, $t  |  |  |
+| sll $d, $s, i  |  |  |
+| sllv $d, $s, $t  |  |  |
+| slt $d, $s, $t  |  |  |
+| slti $d, $s, i  |  |  |
+| sltiu $d, $s, i  |  |  |
+| sltu $d, $s, $t  |  |  |
+| sne $d, $s, $t  |  |  |
+| sra $d, $s, i  |  |  |
+| srl $d, $s, i  |  |  |
+| srlv $d, $s, $t  |  |  |
+| sub $d, $s, $t  |  |  |
+| subu $d, $s, $t  |  |  |
+| sw $d, address  |  |  |
+| sys |  |  |
+| xor $d, $s, $t  |  |  |
+| xori $d, $s, i  |  |  |
+
+### Pseudoinstruction Set
+
+| KASM | Operation |
+| --- | --- |
+| add $d, $s, i |  |
+| b address |  |
+| bal address |  |
+| beq $d, i, address |  |
+| beqz $d, address |  |
+| bge $d, $s, address |  |
+| bgt $d, $s, address |  |
+| bgtu $d, $s, address |  |
+| ble $d, $s, address |  |
+| blt $d, $s, address |  |
+| bne $d, i, address |  |
+| call address |  |
+| clr $d |  |
+| copy $d, $t |  |
+| div $d, $s, $t |  |
+| enter |  |
+| jalr $d |  |
+| la $d, address |  |
+| li $d, i |  |
+| mult $d, $s, $t |  |
+| nop |  |
+| not $d, $t |  |
+| popb $d |  |
+| popw $d |  |
+| pushb $d |  |
+| pushw $d |  |
+| rem $d, $s, $t |  |
+| ret |  |
 
 ### System Calls
 
