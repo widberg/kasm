@@ -145,7 +145,7 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | mflo $d  | $d = lo; advancePc(); |  |
 | mult $f, $s  | lo = $f \* $s; hi = ($f \* $s) >> 32; advancePc(); |  |
 | multu $f, $s  | lo = $f \* $s; hi = ($f \* $s) >> 32; advancePc(); |  |
-| nor $d, $s, $t  | $d = ~($s | $t); advancePc(); |  |
+| nor $d, $s, $t  | $d = ~($s \| $t); advancePc(); |  |
 | or $d, $s, $t  | $d = $s \| $t; advancePc(); |  |
 | ori $d, $s, i  | $d = $s \| i; advancePc(); |  |
 | sb $f, address  | memory\[address\] = $f & 0xFF; advancePc(); |  |
