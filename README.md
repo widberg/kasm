@@ -148,24 +148,24 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | nor $d, $s, $t  | $d = ~($s | $t); advancePc(); |  |
 | or $d, $s, $t  | $d = $s | $t; advancePc(); |  |
 | ori $d, $s, i  | $d = $s | i; advancePc(); |  |
-| sb $d, address  |  |  |
-| seq $d, $s, $t  |  |  |
-| sll $d, $s, i  |  |  |
-| sllv $d, $s, $t  |  |  |
-| slt $d, $s, $t  |  |  |
-| slti $d, $s, i  |  |  |
-| sltiu $d, $s, i  |  |  |
-| sltu $d, $s, $t  |  |  |
-| sne $d, $s, $t  |  |  |
-| sra $d, $s, i  |  |  |
-| srl $d, $s, i  |  |  |
-| srlv $d, $s, $t  |  |  |
-| sub $d, $s, $t  |  |  |
-| subu $d, $s, $t  |  |  |
-| sw $d, address  |  |  |
-| sys |  |  |
-| xor $d, $s, $t  |  |  |
-| xori $d, $s, i  |  |  |
+| sb $f, address  | memory\[address\] = $f & 0xFF; advancePc(); |  |
+| seq $d, $s, $t  | $d = $s == $t; advancePc(); |  |
+| sll $d, $s, i  | $d = $s << i; advancePc(); |  |
+| sllv $d, $s, $t  | $d = $s << $t; advancePc(); |  |
+| slt $d, $s, $t  | $d = $s < $t; advancePc(); |  |
+| slti $d, $s, i  | $d = $s < i; advancePc(); |  |
+| sltiu $d, $s, i  | $d = $s < i; advancePc(); |  |
+| sltu $d, $s, $t  | $d = $s < $t; advancePc(); |  |
+| sne $d, $s, $t  | $d = $s != $t; advancePc(); |  |
+| sra $d, $s, i  | $d = (signed)$s >> i; advancePc(); |  |
+| srl $d, $s, i  | $d = $s >> i; advancePc(); |  |
+| srlv $d, $s, $t  | $d = $s >> $t; advancePc(); |  |
+| sub $d, $s, $t  | $d = $s - $t; advancePc(); |  |
+| subu $d, $s, $t  | $d = $s - $t; advancePc(); |  |
+| sw $d, address  | \*(uint32_t*)&memory\[address\] = $f; advancePc(); |  |
+| sys | systemCall(); advancePc(); |  |
+| xor $d, $s, $t  | $d = $s ^ $t; advancePc(); |  |
+| xori $d, $s, i  | $d = $s ^ i; advancePc(); |  |
 
 ### Pseudoinstruction Set
 
