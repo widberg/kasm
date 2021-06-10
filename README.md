@@ -138,16 +138,16 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | jal address  | advancePc(); $ra = getPc(); setPc(address); |  |
 | jalr $f, $s  | advancePc(); $s = getPc(); setPc($f); |  |
 | jr $f | setPc($f); |  |
-| lb $d, address  |  |  |
-| lui $d, i  |  |  |
-| lw $d, address  |  |  |
-| mfhi $d  |  |  |
-| mflo $d  |  |  |
-| mult $d, $t  |  |  |
-| multu $d, $t  |  |  |
-| nor $d, $s, $t  |  |  |
-| or $d, $s, $t  |  |  |
-| ori $d, $s, i  |  |  |
+| lb $d, address  | $d = memory\[address\]; advancePc(); |  |
+| lui $d, i  | $d = i << 16; advancePc(); |  |
+| lw $d, address  | $d = \*(uint32_t*)&memory\[address\]; advancePc(); |  |
+| mfhi $d  | $d = hi; advancePc(); |  |
+| mflo $d  | $d = lo; advancePc(); |  |
+| mult $f, $s  | lo = $f \* $s; hi = ($f \* $s) >> 32; advancePc(); |  |
+| multu $f, $s  | lo = $f \* $s; hi = ($f \* $s) >> 32; advancePc(); |  |
+| nor $d, $s, $t  | $d = ~($s | $t); advancePc(); |  |
+| or $d, $s, $t  | $d = $s | $t; advancePc(); |  |
+| ori $d, $s, i  | $d = $s | i; advancePc(); |  |
 | sb $d, address  |  |  |
 | seq $d, $s, $t  |  |  |
 | sll $d, $s, i  |  |  |
