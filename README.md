@@ -48,9 +48,9 @@ cmake --build .
 | --- | --- |
 | .text | Move the cursor to the first unwritten byte of the text segment |
 | .data | Move the cursor to the first unwritten byte of the data segment |
-| .word i|a\[, i|a\]... | Align the cursor to the nearest word boundary and writes each immediate or memory direct address as a word to the data segment in sequence |
+| .word i|a\[, i\|a\]... | Align the cursor to the nearest word boundary and writes each immediate or memory direct address as a word to the data segment in sequence |
 | .word i|a:X | Align the cursor to the nearest word boundary and writes the immediate or labeled address as a word to the data segment the specified number of times |
-| .byte i|a\[, i|a\]... | Write each immediate or labeled address as a byte to the data segment in sequence |
+| .byte i|a\[, i\|a\]... | Write each immediate or labeled address as a byte to the data segment in sequence |
 | .byte i|a:X | Write the immediate or memory direct address as a byte to the data segment the specified number of times |
 | .align X | Align the cursor to the nearest 2^X address |
 | .ascii "string" | Write the characters of `string` to the data segment as bytes in sequence |
