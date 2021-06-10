@@ -120,24 +120,24 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | --- | --- | --- |
 | add $d, $s, $t | $d = $s + $t; advancePC(); | 0000 00dd ddds ssss tttt t--- ---- ---- |
 | addi $d, $s, i | $d = $s + i; advancePC(); | 0000 01dd ddds ssss iiii iiii iiii iiii |
-| addiu $d, $s, i  |  |  |
-| addu $d, $s, $t  |  |  |
-| and $d, $s, $t  |  |  |
-| andi $d, $s, i  |  |  |
-| beq $f, $s, address |  |  |
-| bgez $f, address  |  |  |
-| bgezal $f, address  |  |  |
-| bgtz $f, address  |  |  |
-| blez $f, address  |  |  |
-| bltz $f, address  |  |  |
-| bltzal $f, address  |  |  |
-| bne $d, $f, address |  |  |
-| div $d, $t  |  |  |
-| divu $d, $t  |  |  |
-| j address  |  |  |
-| jal address  |  |  |
-| jalr $d, $t  |  |  |
-| jr $d  |  |  |
+| addiu $d, $s, i  | $d = $s + i; advancePc(); |  |
+| addu $d, $s, $t  | $d = $s + $t; advancePc(); |  |
+| and $d, $s, $t  | $d = $s & $t; advancePc(); |  |
+| andi $d, $s, i  | $d = $s & i; advancePc(); |  |
+| beq $f, $s, address | if ($f == $s) setPc(address); |  |
+| bgez $f, address  | if ($f >= 0) setPc(address); |  |
+| bgezal $f, address  | if ($f >= 0) { advancePc(); $ra = getPc(); setPc(address) }; |  |
+| bgtz $f, address  | if ($f > 0) setPc(address); |  |
+| blez $f, address  | if ($f <= 0) setPc(address); |  |
+| bltz $f, address  | if ($f < 0) setPc(address); |  |
+| bltzal $f, address  | if ($f < 0) { advancePc(); $ra = getPc(); setPc(address) }; |  |
+| bne $d, $f, address | if ($f != 0) setPc(address); |  |
+| div $f, $s  | lo = $f / $s; hi = $f % $s |  |
+| divu $f, $s  | lo = $f / $s; hi = $f % $s |  |
+| j address  | setPc(address); |  |
+| jal address  | advancePc(); $ra = getPc(); setPc(address); |  |
+| jalr $f, $s  | advancePc(); $s = getPc(); setPc($f); |  |
+| jr $f | setPc($f); |  |
 | lb $d, address  |  |  |
 | lui $d, i  |  |  |
 | lw $d, address  |  |  |
