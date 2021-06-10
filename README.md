@@ -175,30 +175,30 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | b address | beq $zero, $zero, address |
 | bal address | bgezal $zero, address |
 | beq $f, i, address | ori $at, $zero, i; beq $f, $at, address |
-| beqz $f, address |  |
-| bge $f, $s, address |  |
-| bgt $f, $s, address |  |
-| bgtu $f, $s, address |  |
-| ble $f, $s, address |  |
-| blt $f, $s, address |  |
-| bne $f, i, address |  |
-| call address |  |
-| clr $d |  |
-| copy $d, $t |  |
-| div $d, $s, $t |  |
-| enter |  |
-| jalr $d |  |
-| la $d, address |  |
-| li $d, i |  |
-| mult $d, $s, $t |  |
-| nop |  |
-| not $d, $t |  |
-| popb $d |  |
-| popw $d |  |
-| pushb $d |  |
-| pushw $d |  |
-| rem $d, $s, $t |  |
-| ret |  |
+| beqz $f, address | beq $f, $zero, address |
+| bge $f, $s, address | slt $at, $f, $s; beq $at, $zero, address |
+| bgt $f, $s, address | slt $at, $s, $f; bne $at, $zero, address |
+| bgtu $f, $s, address | sltu $at, $f, $s; beq $at, $zero, address |
+| ble $f, $s, address | slt $at, $s, $f; beq $at, $zero, address |
+| blt $f, $s, address | slt $at, $f, $s; beq $at, $zero, address |
+| bne $f, i, address | ori $at, $zero, i; bne $f, $at, address |
+| call address | jal address |
+| clr $d | or $d, $zero, $zero |
+| copy $d, $s | or $d, $s, $zero |
+| div $d, $s, $t | div $s, $t; mflo $d |
+| enter | addi $sp, $sp, -4; sw $ra, 0($sp); addi $sp, $sp,-4; sw $fp, 0($sp); or $fp, $sp, $zero |
+| jalr $f | jalr $f, $ra |
+| la $d, address | lui $d, address >> 16; ori $d, $d, address & 0xFFFF |
+| li $d, i | lui $d, i >> 16; ori $d, $d, i & 0xFFFF |
+| mult $d, $s, $t | mult $s, $t; mflo $d |
+| nop | sll $zero, $zerp, 0 |
+| not $d, $t | nor $d, $t, $zero |
+| popb $f | lb $f, 0($sp); addi $sp, $sp, 1 |
+| popw $f | lw $f, 0($sp); addi $sp, $sp, 4 |
+| pushb $d | addi $sp, $sp, -1; sb $d, 0($sp)|
+| pushw $d | addi $sp, $sp, -4; sw $d, 0($sp) |
+| rem $d, $s, $t | div $s, $t; mfhi $d |
+| ret | or $sp, $fp, $zero; lw $fp, 0($sp); addi $sp, $sp, 4; lw $ra, 0($sp); addi $sp, $sp, 4; jr $ra |
 
 ### System Calls
 
