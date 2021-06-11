@@ -66,7 +66,7 @@ namespace yy { parser::symbol_type yylex(); }
 
 #define INSTRUCTION_RRR(op, r0, r1, r2) {                           \
 	kasm::InstructionData instructionData;                          \
-	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.opcode = kasm::Opcode::op;                    \
 	instructionData.register0 = r0;                                 \
 	instructionData.register1 = r1;                                 \
 	instructionData.register2 = r2;                                 \
@@ -74,7 +74,7 @@ namespace yy { parser::symbol_type yylex(); }
 
 #define INSTRUCTION_RRL(op, r0, r1, l) {                            \
 	kasm::InstructionData instructionData;                          \
-	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.opcode = kasm::Opcode::op;                    \
 	instructionData.register0 = r0;                                 \
 	instructionData.register1 = r1;                                 \
 	instructionData.immediate = l;                                  \
@@ -82,10 +82,10 @@ namespace yy { parser::symbol_type yylex(); }
 
 #define INSTRUCTION_RRA(op, r0, r1, a, t) {                           \
 	kasm::InstructionData instructionData;                            \
-	instructionData.opcode = kasm::Opcode::##op;                      \
+	instructionData.opcode = kasm::Opcode::op;                      \
 	instructionData.register0 = r0;                                   \
 	instructionData.register1 = r1;                                   \
-	a.type = kasm::AddressType::##t;                                  \
+	a.type = kasm::AddressType::t;                                  \
 	a.position = GET_LOC();                                           \
 	a.instructionData = instructionData;                              \
 	assembler->resolveAddress(a);                                 \
@@ -93,23 +93,23 @@ namespace yy { parser::symbol_type yylex(); }
 
 #define INSTRUCTION_RR(op, r0, r1) {                                \
 	kasm::InstructionData instructionData;                          \
-	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.opcode = kasm::Opcode::op;                    \
 	instructionData.register0 = r0;                                 \
 	instructionData.register1 = r1;                                 \
 	assembler->binary.writeWord(instructionData.instruction); } \
 
 #define INSTRUCTION_RL(op, r0, l) {                                 \
 	kasm::InstructionData instructionData;                          \
-	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.opcode = kasm::Opcode::op;                    \
 	instructionData.register0 = r0;                                 \
 	instructionData.immediate = l;                                  \
 	assembler->binary.writeWord(instructionData.instruction); } \
 
 #define INSTRUCTION_RA(op, r0, a, t) {                                \
 	kasm::InstructionData instructionData;                            \
-	instructionData.opcode = kasm::Opcode::##op;                      \
+	instructionData.opcode = kasm::Opcode::op;                      \
 	instructionData.register0 = r0;                                   \
-	a.type = kasm::AddressType::##t;                                  \
+	a.type = kasm::AddressType::t;                                  \
 	a.position = GET_LOC();                                           \
 	a.instructionData = instructionData;                              \
 	assembler->resolveAddress(a);                                 \
@@ -117,14 +117,14 @@ namespace yy { parser::symbol_type yylex(); }
 
 #define INSTRUCTION_R(op, r0) {                                     \
 	kasm::InstructionData instructionData;                          \
-	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.opcode = kasm::Opcode::op;                    \
 	instructionData.register0 = r0;                                 \
 	assembler->binary.writeWord(instructionData.instruction); } \
 
 #define INSTRUCTION_A(op, a, t) {                                     \
 	kasm::InstructionData instructionData;                            \
-	instructionData.opcode = kasm::Opcode::##op;                      \
-	a.type = kasm::AddressType::##t;                                  \
+	instructionData.opcode = kasm::Opcode::op;                      \
+	a.type = kasm::AddressType::t;                                  \
 	a.position = GET_LOC();                                           \
 	a.instructionData = instructionData;                              \
 	assembler->resolveAddress(a);                                 \
@@ -132,7 +132,7 @@ namespace yy { parser::symbol_type yylex(); }
 
 #define INSTRUCTION_O(op) {                                         \
 	kasm::InstructionData instructionData;                          \
-	instructionData.opcode = kasm::Opcode::##op;                    \
+	instructionData.opcode = kasm::Opcode::op;                    \
 	assembler->binary.writeWord(instructionData.instruction); } \
 
 union SplitWord
