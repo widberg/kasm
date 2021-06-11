@@ -2,6 +2,7 @@
 #define PARSER_HPP
 
 #include "lexer.hpp"
+#include "node.hpp"
 
 #include <unordered_map>
 #include <vector>
@@ -12,6 +13,8 @@ namespace kasm
 	{
 	public:
 		Parser(const std::string& source) : lexer(source) {}
+
+		Node* parse();
 
 		bool match(TokenType tokenType);
 		Token parseToken();

@@ -2,9 +2,9 @@
 
 [![Build status][actions-svg]][actions]
 
-[actions-svg]:       https://github.com/widberg/kasm/workflows/build/badge.svg
+[actions-svg]:       https://github.com/widberg/kasm/workflows/build/badge.svg?branch=master
 
-[actions]:           https://github.com/widberg/kasm/actions?query=workflow%3Abuild
+[actions]:           https://github.com/widberg/kasm/actions?query=workflow%3Abuild+branch%3Amaster
 
 # kasm
 

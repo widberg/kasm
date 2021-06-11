@@ -149,6 +149,7 @@ namespace kasm
 		Instruction() : instruction(0) {}
 		Instruction(instruction_t instruction_) : instruction(instruction_) {}
 
+		instruction_t data() const { return instruction; }
 		OpCode opCode() const { return static_cast<OpCode>((instruction >> OPCODE_OFFSET) & OPCODE_MASK); }
 		Register register0() const { return static_cast<Register>((instruction >> REGISTER_0_OFFSET) & REGISTER_MASK); }
 		Register register1() const { return static_cast<Register>((instruction >> REGISTER_1_OFFSET) & REGISTER_MASK); }

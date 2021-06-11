@@ -2,6 +2,8 @@
 #define PROGRAM_HPP
 
 #include <filesystem>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "specification.hpp"
@@ -37,6 +39,8 @@ namespace kasm
 		std::vector<byte_t> textSegment;
 		std::vector<byte_t> dataSegment;
 		program_pos_t position;
+
+		std::unordered_map<std::string, address_t> symbolTable;
 	};
 } // namespace kasm
 

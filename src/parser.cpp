@@ -68,11 +68,11 @@ namespace kasm
 	{
 		KASM_ASSERT(matchAddress(), "Not an address");
 
-		Address addressData;
+		Address address;
 
 		if (match(TokenType::Integer))
 		{
-			addressData.offset = parseToken().quadWord;
+			address.offset = parseToken().quadWord;
 		}
 
 		if (match(TokenType::OpenParenthesis))
@@ -81,7 +81,7 @@ namespace kasm
 
 			if (match(TokenType::Register))
 			{
-				addressData.reg = parseToken().reg;
+				address.reg = parseToken().reg;
 
 				if (match(TokenType::CloseParenthesis))
 				{
@@ -98,7 +98,7 @@ namespace kasm
 			}
 		}
 
-		return addressData;
+		return address;
 	}
 
 	bool Parser::matchInstruction()

@@ -1,7 +1,9 @@
 #include "assembler.hpp"
 
+#include <memory>
 #include <iostream>
 
+#include "debug.hpp"
 #include "parser.hpp"
 
 namespace kasm
@@ -11,62 +13,19 @@ namespace kasm
 		Parser parser(source);
 		Program program;
 
-		while (!parser.match(TokenType::EndOfFile))
+		std::unique_ptr<Node> root = std::make_unique<Node>(parser.parse());
+
+#if KASM_DEBUG
+		root->dump(std::cout);
+#endif
+
+		if (parser.good())
 		{
-			if (parser.matchIdentifier())
-			{
-				std::string identifier = parser.parseIdentifier();
-
-				if (parser.match(TokenType::Colon))
-				{
-
-				}
-				else
-				{
-
-				}
-			}
-			
-			if (parser.matchInstruction())
-			{
-				OpCode opCode = parser.parseInstruction();
-
-				OperandType instructionFormat = InstructionFormat.at(opCode);
-
-				InstructionData instructionData;
-
-				if (instructionFormat & OperandType::Register0)
-				{
-					if (parser.matchRegister())
-					{
-						instructionData.register0 = parser.parseRegister();
-					}
-					else
-					{
-
-					}
-				}
-
-				if (instructionFormat & OperandType::Register1)
-				{
-					if (parser.matchRegister())
-					{
-						instructionData.register1 = parser.parseRegister();
-					}
-					else
-					{
-
-					}
-				}
-			}
-			else if (parser.matchDirective())
-			{
-				Directive directive = parser.parseDirective();
-			}
-			else
-			{
-
-			}
+			root->write(program);
+		}
+		else
+		{
+			throw 0;
 		}
 
 		return program;

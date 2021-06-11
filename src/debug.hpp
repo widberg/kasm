@@ -6,7 +6,7 @@
 #define KASM_ASSERT(condition, message) assert((message, condition))
 #define KASM_STATIC_ASSERT(condition, message) static_assert(condition, message)
 
-#if defined(_DEBUG) || defined(DEBUG) || defined(NDEBUG)
+#if defined(_DEBUG) || defined(DEBUG) || !defined(NDEBUG)
 #define KASM_DEBUG 1
 #else
 #define KASM_DEBUG 0
