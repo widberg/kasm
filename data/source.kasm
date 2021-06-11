@@ -47,7 +47,7 @@ skip:
 	PRINT_STRING("Thank you for running this program.\n")
 	li $v0, 0   # systemCallType = EXIT
 	jal func  # func()
-	lw $a0, ret # exitCode = *ret
+	lw $a0, retur # exitCode = *retur
 	li $t0, 1
 	add $a0, $a0, $t0
 	sys       # systemCall(systemCallType, exitCode)
@@ -55,11 +55,11 @@ skip:
 # void func(void)
 func:
 	li $t0, 2   # tmp = 2
-	sw $t0, ret # *ret = tmp
+	sw $t0, retur # *retur = tmp
 	jr $ra     # return
 
 	.data
-ret:
+retur:
 	.space 4   # reserve 1 word of space in memory
 msg:
 	#.byte ' ':32
