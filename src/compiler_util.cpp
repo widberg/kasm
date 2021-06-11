@@ -1,6 +1,7 @@
 #include "compiler.hpp"
 
 #include <exception>
+#include <stdexcept>
 #include <iostream>
 
 #include "common.hpp"
@@ -243,7 +244,7 @@ namespace kasm
 			std::cout << "ASM(\"" + astNode->asASM.source + "\");" << std::endl;
 			break;
 		default:
-			throw std::exception("Illegal ast::NodeType");
+			throw std::runtime_error("Illegal ast::NodeType");
 			break;
 		}
 	}
@@ -340,7 +341,7 @@ namespace kasm
 			semanticAnalysis(astNode->asFor.body);
 			break;
 		default:
-			throw std::exception("Illegal ast::NodeType");
+			throw std::runtime_error("Illegal ast::NodeType");
 			break;
 		}
 	}
@@ -688,7 +689,7 @@ namespace kasm
 			writeLine(astNode->asASM.source);
 			break;
 		default:
-			throw std::exception("Illegal ast::NodeType");
+			throw std::runtime_error("Illegal ast::NodeType");
 			break;
 		}
 	}
