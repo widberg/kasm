@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <exception>
+#include <stdexcept>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -383,12 +384,31 @@ namespace kasm
         case SEEK:
             {
                 std::fstream* file = files.at(registers[A0]);
-                file->seekg(registers[A1], registers[A2]);
-                file->seekp(registers[A1], registers[A2]);
+
+                std::ios_base::seekdir seekdir = std::ios_base::beg;
+
+                switch (registers[A2])
+                {
+                case 0:
+                    seekdir = std::ios_base::beg;
+                    break;
+                case 1:
+                    seekdir = std::ios_base::end;
+                    break;
+                case 2:
+                    seekdir = std::ios_base::cur;
+                    break;
+                default:
+                    throw std::runtime_error("Invalid seek mode");
+                    break;
+                }
+
+                file->seekg(registers[A1], seekdir);
+                file->seekp(registers[A1], seekdir);
             }
             break;
         default:
-            throw std::exception(std::string("Illegal system call: " + registers[V0]).c_str());
+            throw std::runtime_error(std::string("Illegal system call: " + registers[V0]).c_str());
             break;
         }
     }
