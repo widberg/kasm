@@ -20,7 +20,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(KASM_DOCS     "Generate documentation target (Requires Sphynx)" OFF)
 option(KASM_GRAMMAR  "Build grammar (Requires Bison and re2c)"         OFF)
 option(KASM_INSTALL  "Generate install targets"                        OFF)
-option(KASM_TESTS    "Generate test target"                            OFF)
 
 add_executable(kasm
 	src/kasm.cpp
@@ -49,19 +48,6 @@ endif()
 
 if(KASM_DOCS)
 	add_subdirectory(docs)
-endif()
-
-if(KASM_TESTS)
-	include(CTest)
-	include(GoogleTest)
-	enable_testing()
-
-	find_package(GTest REQUIRED)
-
-	add_executable(ktest test/ktest.cpp)
-	target_link_libraries(ktest GTest::GTest GTest::Main)
-
-	gtest_discover_tests(ktest)
 endif()
 
 # add_executable(kasm src/common.hpp src/assembler.hpp src/assembler.cpp)
