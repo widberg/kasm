@@ -35,8 +35,11 @@ cmake --build .
 ### Tools
 
 * kasm - Assembler
+  - `kasm asm source.kasm o.kexe`
 * kdsm - Disassembler
+  - `kasm dsm o.kexe source.kasm`
 * kvm - Virtual Machine
+  - `kasm vm o.kexe`
 * kdbg - Debugger
 * klang - K Structured Programming Language Compiler
 
