@@ -56,6 +56,12 @@ namespace kasm
 			void open(const std::string& programPath)
 			{
 				std::ifstream programFile(programPath, std::ios::binary);
+
+				if (!programFile.good())
+				{
+					throw std::runtime_error("Failed to open executable");
+				}
+
 				programFile.read(reinterpret_cast<char*>(&programHeader), sizeof(programHeader));
 				resize(programHeader.textSegmentLength + programHeader.dataSegmentLength);
 				programFile.read(reinterpret_cast<char*>(data()), size());

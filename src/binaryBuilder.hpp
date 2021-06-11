@@ -12,7 +12,6 @@ namespace kasm
 	public:
 		BinaryBuilder() {};
 		BinaryBuilder(const std::string& programPath);
-		~BinaryBuilder() { close(); };
 
 		enum class SegmentType
 		{
