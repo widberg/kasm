@@ -368,7 +368,7 @@ namespace kasm
             std::cout << program.getCharPtr(registers[A0]);
             break;
         case ALLOCATE:
-            registers[V0] = reinterpret_cast<std::uint32_t>(new std::uint8_t[registers[A0]]);
+            registers[V0] = (std::uint32_t)reinterpret_cast<std::uintptr_t>(new std::uint8_t[registers[A0]]);
             break;
         case DEALLOCATE:
             delete[] reinterpret_cast<std::uint8_t*>(registers[A0]);
