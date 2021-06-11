@@ -244,7 +244,7 @@ cyy::parser::symbol_type cyy::yylex(kasm::Compiler& compiler)
 		re2c:define:YYSKIP       = "do { compiler.in.ignore(); if (compiler.in.eof()) TOKEN(END_OF_FILE); } while(0);";
 		re2c:define:YYBACKUP     = "mar = compiler.in.tellg();";
 		re2c:define:YYRESTORE    = "compiler.in.seekg(mar);";
-		re2c:define:YYSTAGP      = "@@{tag} = compiler.in.eof() ? 0 : compiler.in.tellg();";
+		re2c:define:YYSTAGP      = "@@{tag} = compiler.in.eof() ? std::streampos(0) : compiler.in.tellg();";
 		re2c:define:YYSTAGN      = "@@{tag} = 0;";
 		re2c:define:YYSHIFTSTAG  = "@@{tag} += @@{shift};";
         re2c:flags:tags = 1;
