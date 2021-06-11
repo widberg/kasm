@@ -18,6 +18,7 @@
 
 #include <algorithm> // max
 #include <exception>
+#include <stdexcept>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -287,7 +288,7 @@ statement
 		assembler->binary.pad($2);
 	}
 	| INCLUDE STRING end_of_statement { in.include($2); } statement { $$ = $5; }
-	| ERROR   STRING end_of_statement { std::cout << "ERROR: " << $2 << std::endl; throw std::exception("Assembler user defined error"); } statement { $$ = $5; }
+	| ERROR   STRING end_of_statement { std::cout << "ERROR: " << $2 << std::endl; throw std::runtime_error("Assembler user defined error"); } statement { $$ = $5; }
 	| MESSAGE STRING end_of_statement { std::cout << "MESSAGE: " << $2 << std::endl; } statement { $$ = $5; }
 	| DBG     STRING end_of_statement { in.pushString($2); } statement { $$ = $5; }
 	| DBGBP          end_of_statement { KASM_BREAKPOINT(); } statement { $$ = $4; }
@@ -559,17 +560,17 @@ static std::string lexStringLiteral(bool resolve = true)
 		re2c:api:style = free-form;
 		re2c:define:YYCTYPE   = char;
 		re2c:define:YYPEEK    = "in.peek()";
-		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::exception(\"Unclosed string\"); } while(0);";
+		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::runtime_error(\"Unclosed string\"); } while(0);";
 		re2c:define:YYBACKUP  = "mar = in.tellg();";
 		re2c:define:YYRESTORE = "in.seekg(mar);";
 		
-		"\n" { throw std::exception("Unclosed string"); }
+		"\n" { throw std::runtime_error("Unclosed string"); }
 
 		"\\"([abfnrtv]|"\\"|"\'"|"\"") { if (resolve) { str.push_back(ESCAPE_SEQUENCES.at(yych)); } else { str.push_back('\\'); str.push_back(yych); } continue; }
 		[^\\"\""] { str.push_back(yych); continue; }
 
 		"\"" { break; }
-		* { throw std::exception("Illegal escape character in string"); }
+		* { throw std::runtime_error("Illegal escape character in string"); }
 		%}
 	}
 
@@ -589,7 +590,7 @@ static std::string lineAsString()
 		re2c:api:style = free-form;
 		re2c:define:YYCTYPE   = char;
 		re2c:define:YYPEEK    = "in.peek()";
-		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::exception(\"Unclosed line as string\"); } while(0);";
+		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::runtime_error(\"Unclosed line as string\"); } while(0);";
 		re2c:define:YYBACKUP  = "mar = in.tellg();";
 		re2c:define:YYRESTORE = "in.seekg(mar);";
 		
@@ -661,7 +662,7 @@ static std::vector<std::string> argumentList()
 		re2c:api:style = free-form;
 		re2c:define:YYCTYPE   = char;
 		re2c:define:YYPEEK    = "in.peek()";
-		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::exception(\"Unclosed argument list\"); } while(0);";
+		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::runtime_error(\"Unclosed argument list\"); } while(0);";
 		re2c:define:YYBACKUP  = "mar = in.tellg();";
 		re2c:define:YYRESTORE = "in.seekg(mar);";
 		re2c:define:YYSTAGP      = "@@{tag} = in.eof() ? 0 : in.tellg();";
@@ -884,7 +885,7 @@ yy::parser::symbol_type yy::yylex()
 		// Single character operators
 		@s [:,+()] @e { return parser::symbol_type(parser::token_type(GET_CHAR()), loc); }
 
-		* { throw std::exception(std::string("Invalid character of value: " + std::to_string(GET_CHAR())).c_str()); }
+		* { throw std::runtime_error(std::string("Invalid character of value: " + std::to_string(GET_CHAR())).c_str()); }
 		%}
 	}
 }
