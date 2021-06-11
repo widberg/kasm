@@ -191,7 +191,7 @@ Instructions are (1 word | 4 bytes | 32 bits) long.
 | la $d, address | lui $d, address >> 16; ori $d, $d, address & 0xFFFF |
 | li $d, i | lui $d, i >> 16; ori $d, $d, i & 0xFFFF |
 | mult $d, $s, $t | mult $s, $t; mflo $d |
-| nop | sll $zero, $zerp, 0 |
+| nop | sll $zero, $zero, 0 |
 | not $d, $t | nor $d, $t, $zero |
 | popb $f | lb $f, 0($sp); addi $sp, $sp, 1 |
 | popw $f | lw $f, 0($sp); addi $sp, $sp, 4 |
