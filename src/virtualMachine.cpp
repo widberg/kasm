@@ -374,8 +374,28 @@ namespace kasm
             delete[] reinterpret_cast<std::uint8_t*>(registers[A0]);
             break;
         case OPEN_FILE:
-            files.insert({ fileID, new std::fstream(program.getCharPtr(registers[A0]), registers[A1]) });
+        {
+            std::ios_base::openmode mode = std::ios_base::in;
+
+            switch (registers[A2])
+            {
+            case 1:
+                mode = std::ios_base::in;
+                break;
+            case 2:
+                mode = std::ios_base::out;
+                break;
+            case 3:
+                mode = std::ios_base::in | std::ios_base::out;
+                break;
+            default:
+                throw std::runtime_error("Invalid open mode");
+                break;
+            }
+
+            files.insert({ fileID, new std::fstream(program.getCharPtr(registers[A0]), mode) });
             registers[V0] = fileID++;
+        }
             break;
         case CLOSE_FILE:
             delete files.at(registers[A0]);
