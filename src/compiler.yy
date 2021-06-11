@@ -21,6 +21,7 @@ namespace kasm { class Compiler; };
 
 #include <algorithm> // max
 #include <exception>
+#include <stdexcept>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -163,17 +164,17 @@ static std::string lexStringLiteral(kasm::CompoundInputFileStream& in)
 		re2c:api:style = free-form;
 		re2c:define:YYCTYPE   = char;
 		re2c:define:YYPEEK    = "in.peek()";
-		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::exception(\"Unclosed string\"); } while(0);";
+		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::runtime_error(\"Unclosed string\"); } while(0);";
 		re2c:define:YYBACKUP  = "mar = in.tellg();";
 		re2c:define:YYRESTORE = "in.seekg(mar);";
 		
-		"\n" { throw std::exception("Unclosed string"); }
+		"\n" { throw std::runtime_error("Unclosed string"); }
 
 		"\\"([abfnrtv]|"\\"|"\'"|"\"") { str.push_back('\\'); str.push_back(yych); continue; }
 		[^\\"\""] { str.push_back(yych); continue; }
 
 		"\"" { break; }
-		* { throw std::exception("Illegal escape character in string"); }
+		* { throw std::runtime_error("Illegal escape character in string"); }
 		%}
 	}
 
@@ -297,7 +298,7 @@ cyy::parser::symbol_type cyy::yylex(kasm::Compiler& compiler)
 		// Single character operators
 		@s [:,+(){}*-/.<>@&|~?;=%] @e { return parser::symbol_type(parser::token_type(GET_CHAR()), compiler.loc); }
 
-		@s * @e { throw std::exception(std::string("Invalid character of value: " + std::to_string(GET_CHAR())).c_str()); }
+		@s * @e { throw std::runtime_error(std::string("Invalid character of value: " + std::to_string(GET_CHAR())).c_str()); }
 		%}
 	}
 }

@@ -49,6 +49,7 @@ namespace kasm { class Compiler; };
 
 #include <algorithm> // max
 #include <exception>
+#include <stdexcept>
 #include <fstream>
 #include <iostream>
 #include <limits>
