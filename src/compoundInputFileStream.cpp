@@ -1,6 +1,7 @@
 #include "compoundInputFileStream.hpp"
 
 #include <iostream>
+#include <stdexcept>
 
 #include "debug.hpp"
 
@@ -40,8 +41,8 @@ namespace kasm
 
 	void CompoundInputFileStream::seekg(const std::streampos& streamPos)
 	{
-		if (fileEntries.empty()) throw std::exception("compound file stream attempting to seek empty file");
-		if (streamPos >= fileEntries.back().end) throw std::exception("compound file stream attempting to seek past end of available input");
+		if (fileEntries.empty()) throw std::runtime_error("compound file stream attempting to seek empty file");
+		if (streamPos >= fileEntries.back().end) throw std::runtime_error("compound file stream attempting to seek past end of available input");
 		for (auto i = fileEntries.begin(); i != fileEntries.end(); i++)
 		{
 			if (streamPos >= i->start && streamPos < i->end && i->file != nullptr)
