@@ -1,5 +1,7 @@
 #include "assembler.hpp"
 
+#include <stdexcept>
+
 namespace kasm
 {
 	bool Assembler::isIdentifierDefined(const std::string& identifier)
@@ -54,7 +56,7 @@ namespace kasm
 
 		if (mustResolve)
 		{
-			throw std::exception(std::string("Unresolved Label: " + address.label).c_str());
+			throw std::runtime_error(std::string("Unresolved Label: " + address.label).c_str());
 		}
 
 		unresolvedAddressLocations.push_back(address);
@@ -66,7 +68,7 @@ namespace kasm
 	{
 		if (isIdentifierDefined(name))
 		{
-			throw std::exception(std::string("Redefined Identifier: " + name).c_str());
+			throw std::runtime_error(std::string("Redefined Identifier: " + name).c_str());
 		}
 
 		labelLocations[name] = location;
@@ -89,7 +91,7 @@ namespace kasm
 	{
 		if (isIdentifierDefined(name))
 		{
-			throw std::exception(std::string("Redefined Identifier: " + name).c_str());
+			throw std::runtime_error(std::string("Redefined Identifier: " + name).c_str());
 		}
 
 		macros[name] = value;
@@ -99,7 +101,7 @@ namespace kasm
 	{
 		if (isIdentifierDefined(name))
 		{
-			throw std::exception(std::string("Redefined Identifier: " + name).c_str());
+			throw std::runtime_error(std::string("Redefined Identifier: " + name).c_str());
 		}
 
 		macroFunctions[name] = { paramaters, body };
