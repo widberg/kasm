@@ -665,7 +665,7 @@ static std::vector<std::string> argumentList()
 		re2c:define:YYSKIP    = "do { in.ignore(); if (in.eof()) throw std::runtime_error(\"Unclosed argument list\"); } while(0);";
 		re2c:define:YYBACKUP  = "mar = in.tellg();";
 		re2c:define:YYRESTORE = "in.seekg(mar);";
-		re2c:define:YYSTAGP      = "@@{tag} = in.eof() ? 0 : in.tellg();";
+		re2c:define:YYSTAGP      = "@@{tag} = in.eof() ? std::streampos(0) : in.tellg();";
 		re2c:define:YYSTAGN      = "@@{tag} = 0;";
 		re2c:define:YYSHIFTSTAG  = "@@{tag} += @@{shift};";
         re2c:flags:tags = 1;
@@ -740,7 +740,7 @@ yy::parser::symbol_type yy::yylex()
 		re2c:define:YYSKIP       = "do { in.ignore(); if (in.eof()) TOKEN(END_OF_FILE); } while(0);";
 		re2c:define:YYBACKUP     = "mar = in.tellg();";
 		re2c:define:YYRESTORE    = "in.seekg(mar);";
-		re2c:define:YYSTAGP      = "@@{tag} = in.eof() ? 0 : in.tellg();";
+		re2c:define:YYSTAGP      = "@@{tag} = in.eof() ? std::streampos(0) : in.tellg();";
 		re2c:define:YYSTAGN      = "@@{tag} = 0;";
 		re2c:define:YYSHIFTSTAG  = "@@{tag} += @@{shift};";
         re2c:flags:tags = 1;
